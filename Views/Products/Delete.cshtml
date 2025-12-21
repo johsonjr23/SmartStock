@@ -1,0 +1,42 @@
+﻿@model SmartStock.Models.Product
+
+@{
+    ViewData["Title"] = "Delete Product";
+}
+
+<h1>Delete Product</h1>
+@if (TempData["DeleteError"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["DeleteError"]
+    </div>
+}
+
+
+<div class="alert alert-warning">
+    <strong>Warning!</strong> You are about to delete this product.
+    This action <b>cannot be undone</b>.
+</div>
+
+<div class="card p-3" style="max-width: 600px;">
+    <dl class="row">
+        <dt class="col-sm-4">Name</dt>
+        <dd class="col-sm-8">@Model.Name</dd>
+
+        <dt class="col-sm-4">SKU</dt>
+        <dd class="col-sm-8">@(Model.SKU ?? "-")</dd>
+
+        <dt class="col-sm-4">Selling Price</dt>
+        <dd class="col-sm-8">@Model.SellingPrice.ToString("0")</dd>
+
+        <dt class="col-sm-4">Stock</dt>
+        <dd class="col-sm-8">@Model.Stock</dd>
+    </dl>
+</div>
+
+<form asp-action="Delete" method="post" class="mt-3">
+    <input type="hidden" asp-for="Id" />
+
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>

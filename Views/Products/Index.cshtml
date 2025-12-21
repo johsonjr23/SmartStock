@@ -1,0 +1,73 @@
+﻿@model IEnumerable<SmartStock.Models.Product>
+
+@{
+    ViewData["Title"] = "Products";
+}
+
+<h1>Products</h1>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary">Create New Product</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>SKU</th>
+            <th>Selling Price</th>
+            <th>Stock</th>
+            <th>Unit</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            // defensive: if for any reason stock not found, treat as 0
+            var currentStock = ViewBag.Stock.ContainsKey(p.Id)
+            ? ViewBag.Stock[p.Id]
+            : 0;
+
+            <tr>
+                <td>@p.Name</td>
+
+                <td>@(p.Category?.Name ?? "-")</td>
+
+                <td>@(string.IsNullOrEmpty(p.SKU) ? "-" : p.SKU)</td>
+
+                <td>@p.SellingPrice.ToString("0")</td>
+
+                <td>
+                    @if (currentStock <= 0)
+                    {
+                        <span class="badge bg-danger">Out of Stock</span>
+                    }
+                    else if (p.ReorderLevel.HasValue && currentStock <= p.ReorderLevel.Value)
+                    {
+                        <span class="badge bg-warning text-dark">
+                            Low Stock (@currentStock)
+                        </span>
+                    }
+                    else
+                    {
+                        @currentStock
+                    }
+                </td>
+
+                <td>@(p.UnitNavigation?.Name ?? p.Unit ?? "-")</td>
+
+                <td>@p.CreatedAt.ToString("yyyy-MM-dd")</td>
+
+                <td>
+                    <a asp-action="Edit" asp-route-id="@p.Id">Edit</a> |
+                    <a asp-action="Details" asp-route-id="@p.Id">Details</a> |
+                    <a asp-action="Delete" asp-route-id="@p.Id">Delete</a> |
+                    <a asp-action="StockIn" asp-route-id="@p.Id">Stock In</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

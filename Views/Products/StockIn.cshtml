@@ -1,0 +1,21 @@
+﻿@model SmartStock.Models.Product
+
+<h2>Stock In</h2>
+
+<p>
+    <strong>Product:</strong> @Model.Name
+</p>
+
+<form method="post" asp-action="StockIn">
+    <input type="hidden" name="productId" value="@Model.Id" />
+
+    <div>
+        <label>Quantity</label>
+        <input type="number" name="quantity" min="1" required />
+    </div>
+
+    <br />
+
+    <button type="submit">Add Stock</button>
+    <a asp-action="Index">Cancel</a>
+</form>

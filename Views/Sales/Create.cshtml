@@ -1,0 +1,62 @@
+﻿@model SmartStock.ViewModels.CreateSaleViewModel
+
+@{
+    ViewData["Title"] = "New Sale";
+}
+
+<h2>New Sale</h2>
+
+<form asp-action="Create" method="post">
+
+    <div class="mb-3">
+        <label class="form-label">Sale Date</label>
+        <input asp-for="SaleDate" type="date" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Payment Type</label>
+        <select asp-for="PaymentType" class="form-control">
+            <option value="Cash">Cash</option>
+            <option value="Credit">Credit</option>
+        </select>
+    </div>
+
+    <hr />
+
+    <h4>Items</h4>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th style="width:150px;">Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Items.Count; i++)
+            {
+                <tr>
+                    <td>
+                        <select asp-for="Items[@i].ProductId"
+                                asp-items="ViewBag.Products"
+                                class="form-control">
+                            <option value="">-- Select Product --</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input asp-for="Items[@i].Quantity"
+                               class="form-control" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button type="submit" class="btn btn-primary">
+        Save Sale
+    </button>
+
+    <a asp-action="Index" class="btn btn-secondary">
+        Cancel
+    </a>
+</form>

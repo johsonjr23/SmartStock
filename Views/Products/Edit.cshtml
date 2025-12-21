@@ -1,0 +1,66 @@
+﻿@model SmartStock.Models.Product
+
+@{
+    ViewData["Title"] = "Edit Product";
+}
+
+<h1>Edit Product</h1>
+
+<form asp-action="Edit" method="post">
+    @* hidden id *@
+    <input type="hidden" asp-for="Id" />
+
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label asp-for="Name"></label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group col-md-3">
+            <label asp-for="CategoryId">Category</label>
+            <select asp-for="CategoryId" class="form-control" asp-items="@(ViewData["Categories"] as Microsoft.AspNetCore.Mvc.Rendering.SelectList)">
+                <option value="">-- None --</option>
+            </select>
+        </div>
+
+        <div class="form-group col-md-3">
+            <label asp-for="SKU"></label>
+            <input asp-for="SKU" class="form-control" />
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-3">
+            <label asp-for="BuyingPrice"></label>
+            <input asp-for="BuyingPrice" class="form-control" />
+        </div>
+        <div class="form-group col-md-3">
+            <label asp-for="SellingPrice"></label>
+            <input asp-for="SellingPrice" class="form-control" />
+        </div>
+        <div class="form-group col-md-2">
+            <label asp-for="Stock"></label>
+            <input asp-for="Stock" class="form-control" />
+        </div>
+        <div class="form-group col-md-2">
+            <label asp-for="UnitId">Unit</label>
+            <select asp-for="UnitId" class="form-control" asp-items="@(ViewData["Units"] as Microsoft.AspNetCore.Mvc.Rendering.SelectList)">
+                <option value="">-- Unit --</option>
+            </select>
+        </div>
+        <div class="form-group col-md-2">
+            <label asp-for="ReorderLevel"></label>
+            <input asp-for="ReorderLevel" class="form-control" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Back</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
