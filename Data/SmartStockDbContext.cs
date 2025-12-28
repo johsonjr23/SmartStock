@@ -112,9 +112,7 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.InvoiceNumber).HasMaxLength(100);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
-
-            entity.HasOne(d => d.Tenant).WithMany(p => p.Sales)
-                .HasForeignKey(d => d.TenantId);
+            // NOTE: Tenant navigation intentionally removed
         });
 
         modelBuilder.Entity<SaleItem>(entity =>
@@ -122,9 +120,11 @@ public partial class SmartStockDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.SellingPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.SellingPrice)
+       .HasColumnType("decimal(18,2)");
+
             entity.Property(e => e.SubTotal)
-                .HasComputedColumnSql("([Quantity]*[SellingPrice])", false)
+                .HasComputedColumnSql("([Quantity]*[UnitPrice])", false)
                 .HasColumnType("decimal(29, 2)");
 
             entity.HasOne(d => d.Product).WithMany(p => p.SaleItems)

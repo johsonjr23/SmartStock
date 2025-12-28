@@ -19,7 +19,7 @@ public partial class Product
 
     public decimal SellingPrice { get; set; }
 
-    public int Stock { get; set; }
+    
 
     public string? Unit { get; set; }
 

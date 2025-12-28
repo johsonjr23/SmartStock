@@ -1,27 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace SmartStock.Models;
-
-public partial class Sale
+namespace SmartStock.Models
 {
-    public int Id { get; set; }
+    public partial class Sale
+    {
+        public int Id { get; set; }
 
-    public int TenantId { get; set; }
+        // Multi-tenant ownership
+        public int TenantId { get; set; }
 
-    public string? InvoiceNumber { get; set; }
+        // Optional invoice / receipt number
+        public string? InvoiceNumber { get; set; }
 
-    public decimal TotalAmount { get; set; }
+        // Calculated from SaleItems
+        public decimal TotalAmount { get; set; }
 
-    public string PaymentType { get; set; } = "Cash";
+        // Cash, MobileMoney, Card (keep string for now)
+        public string PaymentType { get; set; } = "Cash";
 
-    public DateTime SaleDate { get; set; }
+        // Date sale happened (business date)
+        public DateTime SaleDate { get; set; }
 
-    public int? CreatedBy { get; set; }
+        // Optional: future staff/user tracking
+        public int? CreatedBy { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+        // System timestamp
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public virtual ICollection<SaleItem> SaleItems { get; set; } = new List<SaleItem>();
-
-    public virtual Tenant Tenant { get; set; } = null!;
+        // Navigation
+        public virtual ICollection<SaleItem> SaleItems { get; set; }
+            = new List<SaleItem>();
+    }
 }

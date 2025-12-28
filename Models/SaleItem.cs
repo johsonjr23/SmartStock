@@ -1,27 +1,35 @@
 ﻿using System;
-using System.Collections.Generic;
 
-namespace SmartStock.Models;
-
-public partial class SaleItem
+namespace SmartStock.Models
 {
-    public int Id { get; set; }
+    public partial class SaleItem
+    {
+        public int Id { get; set; }
 
-    public int SaleId { get; set; }
+        // Parent sale
+        public int SaleId { get; set; }
 
-    public int TenantId { get; set; }
+        // Multi-tenant safety (redundant but intentional)
+        public int TenantId { get; set; }
 
-    public int ProductId { get; set; }
+        // Product sold
+        public int ProductId { get; set; }
 
-    public int Quantity { get; set; }
+        // Quantity sold
+        public int Quantity { get; set; }
 
-    public decimal SellingPrice { get; set; }
+        // Price per unit at time of sale
+        public decimal SellingPrice { get; set; }
 
-    public decimal SubTotal { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+        // Quantity * UnitPrice
+        public decimal SubTotal { get; set; }
 
-    public virtual Product Product { get; set; } = null!;
+        // System timestamp
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public virtual Sale Sale { get; set; } = null!;
+        // Navigation
+        public virtual Product Product { get; set; } = null!;
+        public virtual Sale Sale { get; set; } = null!;
+    }
 }

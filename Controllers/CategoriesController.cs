@@ -1,15 +1,19 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using SmartStock.Data;
 using SmartStock.Models;
 
 namespace SmartStock.Controllers
 {
-    public class CategoriesController : Controller
+    public class CategoriesController : BaseController
     {
         private readonly SmartStockDbContext _context;
 
-        public CategoriesController(SmartStockDbContext context)
+        public CategoriesController(
+            SmartStockDbContext context,
+            UserManager<ApplicationUser> userManager
+        ) : base(userManager)
         {
             _context = context;
         }
@@ -17,7 +21,13 @@ namespace SmartStock.Controllers
         // LIST CATEGORIES
         public async Task<IActionResult> Index()
         {
-            var categories = await _context.Categories.ToListAsync();
+            var tenantId = GetTenantId();
+
+            var categories = await _context.Categories
+                .Where(c => c.TenantId == tenantId)
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+
             return View(categories);
         }
 
@@ -32,7 +42,9 @@ namespace SmartStock.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Category category)
         {
-            // IMPORTANT: remove tenant validation
+            var tenantId = GetTenantId();
+
+            // Tenant is always set server-side
             ModelState.Remove("Tenant");
             ModelState.Remove("TenantId");
 
@@ -41,14 +53,13 @@ namespace SmartStock.Controllers
                 return View(category);
             }
 
-            // assign tenant manually (temporary)
-            category.TenantId = 1;
+            category.TenantId = tenantId;
+            category.CreatedAt = DateTime.UtcNow;
 
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
         }
-
     }
 }

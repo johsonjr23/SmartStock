@@ -7,29 +7,35 @@
 <h2>New Sale</h2>
 
 <form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div class="mb-3">
-        <label class="form-label">Sale Date</label>
+        <label asp-for="SaleDate" class="form-label"></label>
         <input asp-for="SaleDate" type="date" class="form-control" />
+        <span asp-validation-for="SaleDate" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Payment Type</label>
+        <label asp-for="PaymentType" class="form-label"></label>
         <select asp-for="PaymentType" class="form-control">
             <option value="Cash">Cash</option>
             <option value="Credit">Credit</option>
         </select>
+        <span asp-validation-for="PaymentType" class="text-danger"></span>
     </div>
 
     <hr />
 
     <h4>Items</h4>
 
-    <table class="table">
+    <table class="table table-bordered">
         <thead>
             <tr>
                 <th>Product</th>
-                <th style="width:150px;">Quantity</th>
+                <th style="width:120px;">Quantity</th>
+                <th style="width:150px;">Unit Price</th>
             </tr>
         </thead>
         <tbody>
@@ -42,11 +48,20 @@
                                 class="form-control">
                             <option value="">-- Select Product --</option>
                         </select>
+                        <span asp-validation-for="Items[@i].ProductId" class="text-danger"></span>
                     </td>
                     <td>
                         <input asp-for="Items[@i].Quantity"
                                class="form-control" />
+                        <span asp-validation-for="Items[@i].Quantity" class="text-danger"></span>
                     </td>
+                    <td>
+                        <input asp-for="Items[@i].SellingPrice"
+                               type="hidden"
+                               class="form-control" />
+                        <span asp-validation-for="Items[@i].SellingPrice" class="text-danger"></span>
+                    </td>
+
                 </tr>
             }
         </tbody>
@@ -60,3 +75,7 @@
         Cancel
     </a>
 </form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

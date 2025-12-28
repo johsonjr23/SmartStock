@@ -35,7 +35,7 @@ namespace SmartStock.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            // 1. Create Tenant
+            // 1️⃣ Create Tenant (Shop)
             var tenant = new Tenant
             {
                 Name = model.ShopName,
@@ -44,9 +44,9 @@ namespace SmartStock.Controllers
             };
 
             _db.Tenants.Add(tenant);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(); // MUST happen before user creation
 
-            // 2. Create User linked to Tenant
+            // 2️⃣ Create User linked to Tenant
             var user = new ApplicationUser
             {
                 UserName = model.Email,
@@ -56,18 +56,26 @@ namespace SmartStock.Controllers
 
             var result = await _userManager.CreateAsync(user, model.Password);
 
+            // ❗ Rollback tenant if user creation fails
             if (!result.Succeeded)
             {
+                _db.Tenants.Remove(tenant);
+                await _db.SaveChangesAsync();
+
                 foreach (var error in result.Errors)
-                    ModelState.AddModelError("", error.Description);
+                    ModelState.AddModelError(string.Empty, error.Description);
 
                 return View(model);
             }
 
-            // 3. Auto login
+            // 3️⃣ Auto-login
             await _signInManager.SignInAsync(user, isPersistent: false);
 
             return RedirectToAction("Index", "Dashboard");
         }
     }
 }
+
+
+
+
