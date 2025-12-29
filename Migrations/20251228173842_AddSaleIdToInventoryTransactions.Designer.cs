@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartStock.Data;
 
@@ -11,9 +12,11 @@ using SmartStock.Data;
 namespace SmartStock.Migrations
 {
     [DbContext(typeof(SmartStockDbContext))]
-    partial class SmartStockDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251228173842_AddSaleIdToInventoryTransactions")]
+    partial class AddSaleIdToInventoryTransactions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -121,8 +124,6 @@ namespace SmartStock.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("SaleId");
-
                     b.ToTable("InventoryTransactions");
                 });
 
@@ -161,6 +162,9 @@ namespace SmartStock.Migrations
 
                     b.Property<decimal>("SellingPrice")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -325,17 +329,16 @@ namespace SmartStock.Migrations
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("SellingPrice")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<decimal>("SubTotal")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("decimal(29, 2)")
                         .HasComputedColumnSql("([Quantity]*[SellingPrice])", false);
 
-
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("SellingPrice")
+                        .HasColumnType("decimal(18, 2)");
 
                     b.HasKey("Id");
 
@@ -532,13 +535,7 @@ namespace SmartStock.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SmartStock.Models.Sale", "Sale")
-                        .WithMany()
-                        .HasForeignKey("SaleId");
-
                     b.Navigation("Product");
-
-                    b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("SmartStock.Models.Product", b =>

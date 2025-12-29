@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartStock.Data;
 
@@ -11,9 +12,11 @@ using SmartStock.Data;
 namespace SmartStock.Migrations
 {
     [DbContext(typeof(SmartStockDbContext))]
-    partial class SmartStockDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251229082803_SyncModelAfterSaleId")]
+    partial class SyncModelAfterSaleId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -331,8 +334,7 @@ namespace SmartStock.Migrations
                     b.Property<decimal>("SubTotal")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("decimal(29, 2)")
-                        .HasComputedColumnSql("([Quantity]*[SellingPrice])", false);
-
+                        .HasComputedColumnSql("([Quantity]*[UnitPrice])", false);
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");

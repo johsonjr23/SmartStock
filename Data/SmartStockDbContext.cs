@@ -124,7 +124,8 @@ public partial class SmartStockDbContext : DbContext
        .HasColumnType("decimal(18,2)");
 
             entity.Property(e => e.SubTotal)
-                .HasComputedColumnSql("([Quantity]*[UnitPrice])", false)
+                .HasComputedColumnSql("([Quantity]*[SellingPrice])", false)
+
                 .HasColumnType("decimal(29, 2)");
 
             entity.HasOne(d => d.Product).WithMany(p => p.SaleItems)

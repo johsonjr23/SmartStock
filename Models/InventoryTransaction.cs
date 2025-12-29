@@ -25,6 +25,7 @@ namespace SmartStock.Models
 
         // Optional link to sale
         public int? SaleId { get; set; }
+        public Sale? Sale { get; set; }
 
         // System timestamp
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
