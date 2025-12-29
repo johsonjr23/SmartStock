@@ -19,7 +19,9 @@ namespace SmartStock.Controllers
             _context = context;
         }
 
+        // =========================
         // LIST PRODUCTS
+        // =========================
         public async Task<IActionResult> Index()
         {
             var tenantId = GetTenantId();
@@ -30,56 +32,41 @@ namespace SmartStock.Controllers
                 .Include(p => p.UnitNavigation)
                 .ToListAsync();
 
-            var stockDict = new Dictionary<int, int>();
-            foreach (var product in products)
-            {
-                stockDict[product.Id] = GetCurrentStock(product.Id, tenantId);
-            }
+            var stockDict = products.ToDictionary(
+                p => p.Id,
+                p => GetCurrentStock(p.Id, tenantId)
+            );
 
             ViewBag.Stock = stockDict;
             return View(products);
         }
 
+        // =========================
         // SHOW CREATE FORM
+        // =========================
         public IActionResult Create()
         {
             var tenantId = GetTenantId();
 
-            ViewData["Categories"] = new SelectList(
-                _context.Categories.Where(c => c.TenantId == tenantId),
-                "Id", "Name"
-            );
-
-            ViewData["Units"] = new SelectList(
-                _context.Units,
-                "Id", "Name"
-            );
-
+            PopulateDropdowns(tenantId);
             return View();
         }
 
+        // =========================
         // SAVE PRODUCT
+        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Product product)
         {
             var tenantId = GetTenantId();
 
-            ModelState.Remove("Tenant");
-            ModelState.Remove("TenantId");
+            ModelState.Remove(nameof(Product.Tenant));
+            ModelState.Remove(nameof(Product.TenantId));
 
             if (!ModelState.IsValid)
             {
-                ViewData["Categories"] = new SelectList(
-                    _context.Categories.Where(c => c.TenantId == tenantId),
-                    "Id", "Name", product.CategoryId
-                );
-
-                ViewData["Units"] = new SelectList(
-                    _context.Units,
-                    "Id", "Name", product.UnitId
-                );
-
+                PopulateDropdowns(tenantId, product.CategoryId, product.UnitId);
                 return View(product);
             }
 
@@ -89,10 +76,13 @@ namespace SmartStock.Controllers
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("StockIn", new { productId = product.Id });
+            // UX FLOW: product → stock in
+            return RedirectToAction(nameof(StockIn), new { productId = product.Id });
         }
 
+        // =========================
         // SHOW EDIT FORM
+        // =========================
         public async Task<IActionResult> Edit(int id)
         {
             var tenantId = GetTenantId();
@@ -103,20 +93,13 @@ namespace SmartStock.Controllers
             if (product == null)
                 return NotFound();
 
-            ViewData["Categories"] = new SelectList(
-                _context.Categories.Where(c => c.TenantId == tenantId),
-                "Id", "Name", product.CategoryId
-            );
-
-            ViewData["Units"] = new SelectList(
-                _context.Units,
-                "Id", "Name", product.UnitId
-            );
-
+            PopulateDropdowns(tenantId, product.CategoryId, product.UnitId);
             return View(product);
         }
 
+        // =========================
         // SAVE EDITED PRODUCT
+        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Product product)
@@ -133,7 +116,10 @@ namespace SmartStock.Controllers
                 return NotFound();
 
             if (!ModelState.IsValid)
+            {
+                PopulateDropdowns(tenantId, product.CategoryId, product.UnitId);
                 return View(product);
+            }
 
             existingProduct.Name = product.Name;
             existingProduct.CategoryId = product.CategoryId;
@@ -145,7 +131,9 @@ namespace SmartStock.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // =========================
         // SHOW DELETE CONFIRMATION
+        // =========================
         public async Task<IActionResult> Delete(int id)
         {
             var tenantId = GetTenantId();
@@ -159,7 +147,9 @@ namespace SmartStock.Controllers
             return View(product);
         }
 
+        // =========================
         // PERFORM DELETE
+        // =========================
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -191,7 +181,9 @@ namespace SmartStock.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // SHOW PRODUCT DETAILS
+        // =========================
+        // PRODUCT DETAILS
+        // =========================
         public async Task<IActionResult> Details(int id)
         {
             var tenantId = GetTenantId();
@@ -207,17 +199,39 @@ namespace SmartStock.Controllers
             return View(product);
         }
 
-        // STOCK IN (POST)
-        [HttpPost]
-        public IActionResult StockIn(int productId, int quantity)
+        // =========================
+        // STOCK IN (GET)
+        // =========================
+        public IActionResult StockIn(int id)
         {
-            if (quantity <= 0)
-                return BadRequest("Quantity must be greater than zero.");
-
             var tenantId = GetTenantId();
 
             var product = _context.Products
-                .FirstOrDefault(p => p.Id == productId && p.TenantId == tenantId);
+               .FirstOrDefault(p => p.Id == id && p.TenantId == tenantId);
+
+            if (product == null)
+                return NotFound();
+
+            return View(product);
+        }
+
+        // =========================
+        // STOCK IN (POST)
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> StockIn(int productId, int quantity)
+        {
+            if (quantity <= 0)
+            {
+                ModelState.AddModelError("", "Quantity must be greater than zero.");
+                return RedirectToAction(nameof(StockIn), new { productId });
+            }
+
+            var tenantId = GetTenantId();
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == productId && p.TenantId == tenantId);
 
             if (product == null)
                 return NotFound();
@@ -227,15 +241,20 @@ namespace SmartStock.Controllers
                 ProductId = productId,
                 QuantityChange = quantity,
                 TransactionType = InventoryTransactionType.Purchase,
-                TenantId = tenantId
+                TenantId = tenantId,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.InventoryTransactions.Add(transaction);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
-            return Ok("Stock added successfully.");
+            // UX FLOW: stock in → back to products
+            return RedirectToAction(nameof(Index));
         }
 
+        // =========================
+        // HELPERS
+        // =========================
         private int GetCurrentStock(int productId, int tenantId)
         {
             return _context.InventoryTransactions
@@ -243,19 +262,17 @@ namespace SmartStock.Controllers
                 .Sum(t => t.QuantityChange);
         }
 
-        // STOCK IN (GET)
-        public IActionResult StockIn(int productId)
+        private void PopulateDropdowns(int tenantId, int? categoryId = null, int? unitId = null)
         {
-            var tenantId = GetTenantId();
+            ViewData["Categories"] = new SelectList(
+                _context.Categories.Where(c => c.TenantId == tenantId),
+                "Id", "Name", categoryId
+            );
 
-            var product = _context.Products
-                .FirstOrDefault(p => p.Id == productId && p.TenantId == tenantId);
-
-            if (product == null)
-                return NotFound();
-
-            return View(product);
+            ViewData["Units"] = new SelectList(
+                _context.Units,
+                "Id", "Name", unitId
+            );
         }
-
     }
 }

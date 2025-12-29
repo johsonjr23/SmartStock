@@ -22,6 +22,9 @@ namespace SmartStock.Controllers
             _signInManager = signInManager;
         }
 
+        // =========================
+        // REGISTER
+        // =========================
         [HttpGet]
         public IActionResult Register()
         {
@@ -44,7 +47,7 @@ namespace SmartStock.Controllers
             };
 
             _db.Tenants.Add(tenant);
-            await _db.SaveChangesAsync(); // MUST happen before user creation
+            await _db.SaveChangesAsync(); // MUST happen first
 
             // 2️⃣ Create User linked to Tenant
             var user = new ApplicationUser
@@ -68,14 +71,62 @@ namespace SmartStock.Controllers
                 return View(model);
             }
 
-            // 3️⃣ Auto-login
+            // 3️⃣ Auto-login after registration
             await _signInManager.SignInAsync(user, isPersistent: false);
 
             return RedirectToAction("Index", "Dashboard");
         }
+
+        // =========================
+        // LOGIN
+        // =========================
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(LoginViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var result = await _signInManager.PasswordSignInAsync(
+                model.Email,
+                model.Password,
+                model.RememberMe,
+                lockoutOnFailure: false
+            );
+
+            if (result.Succeeded)
+            {
+                return RedirectToAction("Index", "Dashboard");
+            }
+
+            ModelState.AddModelError(string.Empty, "Invalid email or password.");
+            return View(model);
+        }
+
+        // =========================
+        // LOGOUT
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Login");
+        }
+
+        // =========================
+        // ACCESS DENIED
+        // =========================
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
     }
 }
-
-
-
-

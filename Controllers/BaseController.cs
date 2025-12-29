@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using SmartStock.Models;
+using System.Security.Claims;
 
 namespace SmartStock.Controllers
 {
+    [Authorize] // 🔒 Enforce login for all derived controllers
     public abstract class BaseController : Controller
     {
         protected readonly UserManager<ApplicationUser> _userManager;
@@ -15,17 +18,26 @@ namespace SmartStock.Controllers
 
         protected int GetTenantId()
         {
+            // User is guaranteed to be authenticated because of [Authorize]
             var userId = _userManager.GetUserId(User);
 
-            if (userId == null)
-                throw new Exception("User not logged in");
+            // Extra safety (should not normally happen)
+            if (string.IsNullOrEmpty(userId))
+            {
+                throw new UnauthorizedAccessException("User is not authenticated.");
+            }
 
-            var user = _userManager.Users
+            var tenantId = _userManager.Users
                 .Where(u => u.Id == userId)
-                .Select(u => new { u.TenantId })
-                .First();
+                .Select(u => u.TenantId)
+                .FirstOrDefault();
 
-            return user.TenantId;
+            if (tenantId == 0)
+            {
+                throw new Exception("Tenant not assigned to user.");
+            }
+
+            return tenantId;
         }
     }
 }
