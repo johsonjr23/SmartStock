@@ -102,34 +102,42 @@ namespace SmartStock.Controllers
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Product product)
+        public IActionResult Edit(int id, Product model)
         {
             var tenantId = GetTenantId();
 
-            if (id != product.Id)
-                return NotFound();
+            ModelState.Remove(nameof(Product.Tenant));
+            ModelState.Remove(nameof(Product.TenantId));
 
-            var existingProduct = await _context.Products
-                .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
-
-            if (existingProduct == null)
+            if (id != model.Id)
                 return NotFound();
 
             if (!ModelState.IsValid)
             {
-                PopulateDropdowns(tenantId, product.CategoryId, product.UnitId);
-                return View(product);
+                PopulateDropdowns(tenantId, model.CategoryId, model.UnitId);
+                return View(model);
             }
 
-            existingProduct.Name = product.Name;
-            existingProduct.CategoryId = product.CategoryId;
-            existingProduct.UnitId = product.UnitId;
-            existingProduct.SellingPrice = product.SellingPrice;
-            existingProduct.SKU = product.SKU;
+            var product = _context.Products
+                .FirstOrDefault(p => p.Id == id && p.TenantId == tenantId);
 
-            await _context.SaveChangesAsync();
+            if (product == null)
+                return NotFound();
+
+            product.Name = model.Name;
+            product.CategoryId = model.CategoryId;
+            product.SKU = model.SKU;
+            product.BuyingPrice = model.BuyingPrice;
+            product.SellingPrice = model.SellingPrice;
+            product.UnitId = model.UnitId; // ✅ FIX
+            product.ReorderLevel = model.ReorderLevel;
+
+            _context.SaveChanges();
+
             return RedirectToAction(nameof(Index));
         }
+
+
 
         // =========================
         // SHOW DELETE CONFIRMATION
