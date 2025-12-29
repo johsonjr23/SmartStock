@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Identity;
 using SmartStock.Data;
 using SmartStock.Models;
+using SmartStock.ViewModels;
 
 namespace SmartStock.Controllers
 {
@@ -27,7 +28,8 @@ namespace SmartStock.Controllers
             var tenantId = GetTenantId();
 
             var products = await _context.Products
-                .Where(p => p.TenantId == tenantId)
+                .Where(p => p.TenantId == tenantId && p.IsActive)
+
                 .Include(p => p.Category)
                 .Include(p => p.UnitNavigation)
                 .ToListAsync();
@@ -142,52 +144,12 @@ namespace SmartStock.Controllers
         // =========================
         // SHOW DELETE CONFIRMATION
         // =========================
-        public async Task<IActionResult> Delete(int id)
-        {
-            var tenantId = GetTenantId();
-
-            var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
-
-            if (product == null)
-                return NotFound();
-
-            return View(product);
-        }
+      
 
         // =========================
         // PERFORM DELETE
         // =========================
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var tenantId = GetTenantId();
-
-            var product = await _context.Products
-                .Include(p => p.SaleItems)
-                .Include(p => p.PurchaseItems)
-                .Include(p => p.StockHistories)
-                .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
-
-            if (product == null)
-                return NotFound();
-
-            if (product.SaleItems.Any() ||
-                product.PurchaseItems.Any() ||
-                product.StockHistories.Any())
-            {
-                TempData["DeleteError"] =
-                    "This product cannot be deleted because it has sales, purchases, or stock history.";
-
-                return RedirectToAction(nameof(Delete), new { id });
-            }
-
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction(nameof(Index));
-        }
+       
 
         // =========================
         // PRODUCT DETAILS
@@ -282,5 +244,117 @@ namespace SmartStock.Controllers
                 "Id", "Name", unitId
             );
         }
+
+        public IActionResult AdjustStock(int id)
+        {
+            var tenantId = GetTenantId();
+
+            var product = _context.Products
+                .FirstOrDefault(p => p.Id == id && p.TenantId == tenantId);
+
+            if (product == null)
+                return NotFound();
+
+            var vm = new AdjustStockViewModel
+            {
+                ProductId = product.Id,
+                ProductName = product.Name
+            };
+
+            return View(vm);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AdjustStock(AdjustStockViewModel vm)
+        {
+            var tenantId = GetTenantId();
+
+            if (!ModelState.IsValid)
+                return View(vm);
+
+            if (vm.Quantity == 0)
+            {
+                ModelState.AddModelError("", "Adjustment quantity cannot be zero.");
+                return View(vm);
+            }
+
+            if (string.IsNullOrWhiteSpace(vm.Reason))
+            {
+                ModelState.AddModelError("", "Reason is required for stock adjustment.");
+                return View(vm);
+            }
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == vm.ProductId && p.TenantId == tenantId);
+
+            if (product == null)
+                return NotFound();
+
+            var adjustment = new InventoryTransaction
+            {
+                ProductId = product.Id,
+                TenantId = tenantId,
+                QuantityChange = vm.Quantity,
+                TransactionType = InventoryTransactionType.Adjustment,
+                Reason = vm.Reason
+            };
+
+            _context.InventoryTransactions.Add(adjustment);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Details), new { id = product.Id });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Deactivate(int id)
+        {
+            var tenantId = GetTenantId();
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
+
+            if (product == null)
+                return NotFound();
+
+            product.IsActive = false;
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Activate(int id)
+        {
+            var tenantId = GetTenantId();
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId);
+
+            if (product == null)
+                return NotFound();
+
+            product.IsActive = true;
+            await _context.SaveChangesAsync();
+
+
+            //return RedirectToAction(nameof(Index));
+
+            TempData["Success"] = "Product activated successfully.";
+            return RedirectToAction(nameof(Inactive));
+
+        }
+        public async Task<IActionResult> Inactive()
+        {
+            var tenantId = GetTenantId();
+
+            var products = await _context.Products
+                .Where(p => p.TenantId == tenantId && !p.IsActive)
+                .Include(p => p.Category)
+                .ToListAsync();
+
+            return View(products);
+        }
+
+
     }
 }

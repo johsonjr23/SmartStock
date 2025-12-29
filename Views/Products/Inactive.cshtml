@@ -1,0 +1,51 @@
+﻿@model IEnumerable<SmartStock.Models.Product>
+
+@{
+    ViewData["Title"] = "Deactivated Products";
+}
+
+<h2>Deactivated Products</h2>
+
+<div class="alert alert-warning">
+    These products are inactive and not available for sale.
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Selling Price</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.Name</td>
+                <td>@(p.Category?.Name ?? "-")</td>
+                <td>@p.SellingPrice</td>
+                <td>
+                    <form asp-action="Activate"
+                          asp-route-id="@p.Id"
+                          method="post"
+                          class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-success">
+                            Activate
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["Success"]
+    </div>
+}
+
+<a asp-action="Index" class="btn btn-secondary">Back to Products</a>

@@ -19,7 +19,8 @@ public partial class Product
 
     public decimal SellingPrice { get; set; }
 
-    
+    public bool IsActive { get; set; } = true;
+
 
     public string? Unit { get; set; }
 
