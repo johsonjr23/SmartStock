@@ -5,6 +5,19 @@
 }
 
 <h2>Deactivated Products</h2>
+<form method="get" asp-action="Inactive" class="mb-3">
+    <div class="input-group">
+        <input type="text"
+               name="search"
+               value="@ViewBag.Search"
+               class="form-control"
+               placeholder="Search inactive products..." />
+
+        <button class="btn btn-outline-secondary" type="submit">
+            Search
+        </button>
+    </div>
+</form>
 
 <div class="alert alert-warning">
     These products are inactive and not available for sale.
@@ -40,6 +53,15 @@
             </tr>
         }
     </tbody>
+    @if (!Model.Any())
+    {
+        <tr>
+            <td colspan="8" class="text-center text-muted">
+                No inactive products found.
+            </td>
+        </tr>
+    }
+
 </table>
 @if (TempData["Success"] != null)
 {
