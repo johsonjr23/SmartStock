@@ -23,9 +23,11 @@ namespace SmartStock.Controllers
         // =========================
         // LIST PRODUCTS
         // =========================
-        
-        public async Task<IActionResult> Index(string search)
+
+        public async Task<IActionResult> Index(string search, int page = 1)
         {
+            const int PageSize = 20;
+
             var tenantId = GetTenantId();
 
             var query = _context.Products
@@ -41,7 +43,17 @@ namespace SmartStock.Controllers
                     p.SKU.Contains(search));
             }
 
-            var products = await query.ToListAsync();
+            var totalCount = await query.CountAsync();
+
+            var products = await query
+                .OrderBy(p => p.Name)              // REQUIRED for stable pagination
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
+                .ToListAsync();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages =
+                (int)Math.Ceiling(totalCount / (double)PageSize);
 
             ViewBag.Search = search;
 
@@ -52,6 +64,7 @@ namespace SmartStock.Controllers
 
             return View(products);
         }
+
 
 
         // =========================
