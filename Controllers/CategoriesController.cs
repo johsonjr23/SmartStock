@@ -59,7 +59,9 @@ namespace SmartStock.Controllers
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index));
+            //return RedirectToAction(nameof(Index));
+            return RedirectToAction("Create", "Products");
+
         }
     }
 }

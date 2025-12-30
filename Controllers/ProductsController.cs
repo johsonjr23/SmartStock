@@ -23,25 +23,36 @@ namespace SmartStock.Controllers
         // =========================
         // LIST PRODUCTS
         // =========================
-        public async Task<IActionResult> Index()
+        
+        public async Task<IActionResult> Index(string search)
         {
             var tenantId = GetTenantId();
 
-            var products = await _context.Products
+            var query = _context.Products
                 .Where(p => p.TenantId == tenantId && p.IsActive)
-
                 .Include(p => p.Category)
                 .Include(p => p.UnitNavigation)
-                .ToListAsync();
+                .AsQueryable();
 
-            var stockDict = products.ToDictionary(
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(p =>
+                    p.Name.Contains(search) ||
+                    p.SKU.Contains(search));
+            }
+
+            var products = await query.ToListAsync();
+
+            ViewBag.Search = search;
+
+            ViewBag.Stock = products.ToDictionary(
                 p => p.Id,
                 p => GetCurrentStock(p.Id, tenantId)
             );
 
-            ViewBag.Stock = stockDict;
             return View(products);
         }
+
 
         // =========================
         // SHOW CREATE FORM
@@ -79,7 +90,9 @@ namespace SmartStock.Controllers
             await _context.SaveChangesAsync();
 
             // UX FLOW: product → stock in
-            return RedirectToAction(nameof(StockIn), new { productId = product.Id });
+           // return RedirectToAction(nameof(StockIn), new { productId = product.Id });
+            return RedirectToAction("StockIn", new { id = product.Id });
+
         }
 
         // =========================

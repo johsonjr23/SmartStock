@@ -6,9 +6,32 @@
 
 <h1>Products</h1>
 
+
+<form method="get" asp-action="Index" class="mb-3">
+    <div class="input-group">
+        <input type="text"
+               name="search"
+               value="@ViewBag.Search"
+               class="form-control"
+               placeholder="Search by product name or SKU..." />
+
+        <button class="btn btn-outline-primary" type="submit">
+            Search
+        </button>
+    </div>
+</form>
+
+
+
 <p>
     <a asp-action="Create" class="btn btn-primary">Create New Product</a>
 </p>
+<a asp-controller="Categories"
+   asp-action="Index"
+   class="btn btn-outline-secondary ms-2">
+    Manage Categories
+</a>
+
 <a asp-action="Inactive" class="btn btn-outline-warning ms-2">
     View Deactivated Products
 </a>
@@ -74,4 +97,13 @@
             </tr>
         }
     </tbody>
+    @if (!Model.Any())
+    {
+        <tr>
+            <td colspan="8" class="text-center text-muted">
+                No products found.
+            </td>
+        </tr>
+    }
+
 </table>

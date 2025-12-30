@@ -5,6 +5,7 @@
 }
 
 <h1>Create Product</h1>
+
 @if (!ViewData.ModelState.IsValid)
 {
     <div class="alert alert-danger">
@@ -14,52 +15,87 @@
 
 @Html.ValidationSummary(false, "", new { @class = "text-danger" })
 
-
 <form asp-action="Create" method="post">
+
     <div class="form-row">
+
+        <!-- Product Name -->
         <div class="form-group col-md-6">
             <label asp-for="Name"></label>
             <input asp-for="Name" class="form-control" />
             <span asp-validation-for="Name" class="text-danger"></span>
         </div>
 
+        <!-- Category -->
         <div class="form-group col-md-3">
             <label asp-for="CategoryId">Category</label>
-            <select asp-for="CategoryId" class="form-control" asp-items="@(ViewData["Categories"] as Microsoft.AspNetCore.Mvc.Rendering.SelectList)">
-                <option value="">-- None --</option>
-            </select>
+
+            <div class="d-flex gap-2">
+                <select asp-for="CategoryId"
+                        asp-items="ViewBag.Categories"
+                        class="form-control">
+                    <option value="">-- Select Category --</option>
+                </select>
+
+                <a asp-controller="Categories"
+                   asp-action="Create"
+                   class="btn btn-outline-secondary"
+                   title="Add new category">
+                    +
+                </a>
+            </div>
+
+            <span asp-validation-for="CategoryId" class="text-danger"></span>
         </div>
 
+        <!-- SKU -->
         <div class="form-group col-md-3">
             <label asp-for="SKU"></label>
             <input asp-for="SKU" class="form-control" />
+            <span asp-validation-for="SKU" class="text-danger"></span>
         </div>
+
     </div>
 
     <div class="form-row">
+
+        <!-- Buying Price -->
         <div class="form-group col-md-3">
             <label asp-for="BuyingPrice"></label>
             <input asp-for="BuyingPrice" class="form-control" />
+            <span asp-validation-for="BuyingPrice" class="text-danger"></span>
         </div>
+
+        <!-- Selling Price -->
         <div class="form-group col-md-3">
             <label asp-for="SellingPrice"></label>
             <input asp-for="SellingPrice" class="form-control" />
+            <span asp-validation-for="SellingPrice" class="text-danger"></span>
         </div>
-      
+
+        <!-- Unit -->
         <div class="form-group col-md-2">
             <label asp-for="UnitId">Unit</label>
-            <select asp-for="UnitId" class="form-control" asp-items="@(ViewData["Units"] as Microsoft.AspNetCore.Mvc.Rendering.SelectList)">
+            <select asp-for="UnitId"
+                    asp-items="ViewBag.Units"
+                    class="form-control">
                 <option value="">-- Unit --</option>
             </select>
+            <span asp-validation-for="UnitId" class="text-danger"></span>
         </div>
+
+        <!-- Reorder Level -->
         <div class="form-group col-md-2">
             <label asp-for="ReorderLevel"></label>
             <input asp-for="ReorderLevel" class="form-control" />
+            <span asp-validation-for="ReorderLevel" class="text-danger"></span>
         </div>
+
     </div>
 
     <button type="submit" class="btn btn-success">Create</button>
     <a asp-action="Index" class="btn btn-secondary">Back</a>
+
 </form>
 
 @section Scripts {
