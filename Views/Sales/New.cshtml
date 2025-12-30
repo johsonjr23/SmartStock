@@ -1,0 +1,221 @@
+﻿@model SmartStock.ViewModels.CreateSaleViewModel
+
+@{
+    ViewData["Title"] = "New Sale";
+}
+
+<h2>New Sale</h2>
+
+<form asp-action="New" method="post">
+
+    <!-- =====================
+         SALE HEADER
+    ====================== -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <label asp-for="SaleDate" class="form-label"></label>
+            <input asp-for="SaleDate" class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="PaymentType" class="form-label"></label>
+            <select asp-for="PaymentType" class="form-control">
+                <option>Cash</option>
+                <option>MobileMoney</option>
+                <option>Card</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- =====================
+         PRODUCT SEARCH (AUTOCOMPLETE)
+    ====================== -->
+    <div class="row mb-3 position-relative">
+        <div class="col-md-6">
+            <label>Search product (Name or SKU)</label>
+            <input asp-for="ProductSearch"
+                   id="productSearch"
+                   class="form-control"
+                   placeholder="Type product name or scan barcode"
+                   autocomplete="off"
+                   autofocus />
+
+            <!-- 🔥 ADDED: Suggestions container -->
+            <ul id="productSuggestions"
+                class="list-group position-absolute w-100"
+                style="z-index:1000; display:none;">
+            </ul>
+        </div>
+    </div>
+
+    <!-- =====================
+         CART TABLE
+    ====================== -->
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Product</th>
+                <th style="width:120px">Qty</th>
+                <th style="width:150px">Price</th>
+                <th style="width:150px">Subtotal</th>
+                <th style="width:80px"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Count == 0)
+            {
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                        No items added yet
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @for (int i = 0; i < Model.Items.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            @Model.Items[i].ProductName
+                            <input type="hidden" asp-for="Items[@i].ProductId" />
+                            <input type="hidden" asp-for="Items[@i].ProductName" />
+                        </td>
+
+                        <td>
+                            <input asp-for="Items[@i].Quantity"
+                                   class="form-control"
+                                   onchange="this.form.submit()" />
+                        </td>
+
+                        <td>
+                            <input asp-for="Items[@i].UnitPrice"
+                                   class="form-control"
+                                   readonly />
+                        </td>
+
+                        <td>
+                            <strong>@Model.Items[i].SubTotal.ToString("N0")</strong>
+                        </td>
+
+                        <td>
+                            <button type="submit"
+                                    name="removeIndex"
+                                    value="@i"
+                                    class="btn btn-sm btn-danger">
+                                ✕
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <!-- =====================
+         TOTAL
+    ====================== -->
+    <div class="row mb-3">
+        <div class="col-md-6"></div>
+        <div class="col-md-6 text-end">
+            <h4>
+                Total:
+                <span class="text-success">
+                    @Model.TotalAmount.ToString("N0")
+                </span>
+            </h4>
+        </div>
+    </div>
+
+    <!-- =====================
+         ACTIONS
+    ====================== -->
+    <div class="d-flex justify-content-between">
+        <button type="submit"
+                name="action"
+                value="add"
+                class="btn btn-secondary">
+            + Add Product
+        </button>
+
+        <button type="submit"
+                name="action"
+                value="complete"
+                class="btn btn-primary btn-lg">
+            COMPLETE SALE
+        </button>
+    </div>
+
+</form>
+
+<!-- =====================
+     🔥 ADDED: AUTOCOMPLETE SCRIPT
+====================== -->
+@section Scripts {
+    <script>
+        const input = document.getElementById("productSearch");
+        const list = document.getElementById("productSuggestions");
+        let timer = null;
+
+        input.addEventListener("keyup", function () {
+            clearTimeout(timer);
+
+            const term = input.value.trim();
+
+            if (term.length < 2) {
+                list.style.display = "none";
+                list.innerHTML = "";
+                return;
+            }
+
+            timer = setTimeout(() => {
+                fetch(`/Sales/SearchProducts?term=${encodeURIComponent(term)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        list.innerHTML = "";
+
+                        if (data.length === 0) {
+                            list.style.display = "none";
+                            return;
+                        }
+
+                        data.forEach(item => {
+                            const li = document.createElement("li");
+                            li.className = "list-group-item list-group-item-action";
+                            li.textContent = item.label;
+
+
+                                    li.onclick = () => {
+            input.value = item.value;
+            list.style.display = "none";
+
+            // 🔥 AUTO-ADD TO CART
+            const form = input.closest("form");
+
+            // create hidden input: action=add
+            const actionInput = document.createElement("input");
+            actionInput.type = "hidden";
+            actionInput.name = "action";
+            actionInput.value = "add";
+
+            form.appendChild(actionInput);
+            form.submit();
+        };
+
+
+                           
+                            list.appendChild(li);
+                        });
+
+                        list.style.display = "block";
+                    });
+            }, 300);
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener("click", function (e) {
+            if (!input.contains(e.target) && !list.contains(e.target)) {
+                list.style.display = "none";
+            }
+        });
+    </script>
+}

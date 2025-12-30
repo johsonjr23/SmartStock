@@ -1,137 +1,186 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 using SmartStock.Data;
 using SmartStock.Models;
 using SmartStock.ViewModels;
 
 namespace SmartStock.Controllers
 {
-    [Authorize]
-    public class SalesController : BaseController
+    public class SalesController : Controller
     {
         private readonly SmartStockDbContext _context;
 
-        public SalesController(
-            SmartStockDbContext context,
-            UserManager<ApplicationUser> userManager
-        ) : base(userManager)
+        public SalesController(SmartStockDbContext context)
         {
             _context = context;
         }
 
-        // GET: Sales/Create
-        public IActionResult Create()
+        // =========================
+        // GET: /Sales/New
+        // =========================
+        [HttpGet]
+        public IActionResult New()
         {
-            var tenantId = GetTenantId();
-
-            ViewBag.Products = new SelectList(
-                _context.Products
-                    .Where(p => p.TenantId == tenantId)
-                    .OrderBy(p => p.Name)
-                    .AsNoTracking(),
-                "Id",
-                "Name"
-            );
-
             var vm = new CreateSaleViewModel();
-            vm.Items.Add(new CreateSaleItemViewModel());
-
+            LoadProducts();
             return View(vm);
         }
 
-        // POST: Sales/Create
+        // =========================
+        // POST: /Sales/New
+        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(CreateSaleViewModel vm)
+        public IActionResult New(
+            CreateSaleViewModel model,
+            string action,
+            int? removeIndex)
         {
-            var tenantId = GetTenantId();
+            model.Items ??= new();
 
-            if (!ModelState.IsValid)
+            // -------------------------
+            // ADD PRODUCT
+            // -------------------------
+            if (action == "add")
             {
-                ViewBag.Products = new SelectList(
-                    _context.Products
-                        .Where(p => p.TenantId == tenantId)
-                        .OrderBy(p => p.Name),
-                    "Id",
-                    "Name"
-                );
+                if (string.IsNullOrWhiteSpace(model.ProductSearch))
+                {
+                    ModelState.AddModelError("", "Type a product name or SKU");
+                    return View(model);
+                }
 
-                return View(vm);
-            }
+                var search = model.ProductSearch.Trim();
 
-            // 1) Create Sale
-            var sale = new Sale
-            {
-                TenantId = tenantId,
-                SaleDate = vm.SaleDate,
-                PaymentType = vm.PaymentType,
-                TotalAmount = 0m
-            };
-
-            _context.Sales.Add(sale);
-            await _context.SaveChangesAsync();
-
-            decimal total = 0m;
-
-            // 2) Create SaleItems + Stock OUT
-            foreach (var item in vm.Items)
-            {
-                if (item.Quantity <= 0)
-                    continue;
-
-                var product = await _context.Products
-                    .FirstOrDefaultAsync(p => p.Id == item.ProductId && p.TenantId == tenantId);
+                var product = _context.Products
+                    .Where(p => p.IsActive)
+                    .Where(p =>
+                        p.Name.Contains(search) ||
+                        (p.SKU != null && p.SKU.Contains(search)))
+                    .OrderBy(p => p.Name)
+                    .FirstOrDefault();
 
                 if (product == null)
-                    continue;
-
-                var subTotal = item.Quantity * item.SellingPrice;
-
-                var saleItem = new SaleItem
                 {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    SellingPrice = item.SellingPrice,
-                    SubTotal = subTotal
-                };
+                    ModelState.AddModelError("", "Product not found");
+                    return View(model);
+                }
 
+                var existingItem = model.Items
+                    .FirstOrDefault(i => i.ProductId == product.Id);
 
-                _context.SaleItems.Add(saleItem);
-                total += subTotal;
-
-                var stockOut = new InventoryTransaction
+                if (existingItem != null)
                 {
-                    TenantId = tenantId,
-                    ProductId = product.Id,
-                    QuantityChange = -item.Quantity,
-                    TransactionType = InventoryTransactionType.Sale,
-                    SaleId = sale.Id
-                };
+                    existingItem.Quantity += 1;
+                }
+                else
+                {
+                    model.Items.Add(new SaleItemInputViewModel
+                    {
+                        ProductId = product.Id,
+                        ProductName = product.Name,
+                        UnitPrice = product.SellingPrice,
+                        Quantity = 1,
+                        AvailableStock = GetCurrentStock(product.Id)
+                    });
+                }
 
-                _context.InventoryTransactions.Add(stockOut);
+                model.ProductSearch = "";
+                return View(model);
             }
 
-            // 3) Update totals
-            sale.TotalAmount = total;
-            await _context.SaveChangesAsync();
+            // -------------------------
+            // REMOVE ITEM
+            // -------------------------
+            if (removeIndex.HasValue &&
+                removeIndex.Value >= 0 &&
+                removeIndex.Value < model.Items.Count)
+            {
+                model.Items.RemoveAt(removeIndex.Value);
+                return View(model);
+            }
 
-            return RedirectToAction("Index", "Sales");
+            // -------------------------
+            // COMPLETE SALE (WITH STOCK VALIDATION)
+            // -------------------------
+            if (action == "complete")
+            {
+                if (model.Items.Count == 0)
+                {
+                    ModelState.AddModelError("", "Add at least one item");
+                    return View(model);
+                }
+
+                // 🔒 STOCK VALIDATION
+                foreach (var item in model.Items)
+                {
+                    var currentStock = GetCurrentStock(item.ProductId);
+
+                    if (item.Quantity > currentStock)
+                    {
+                        ModelState.AddModelError("",
+                            $"Not enough stock for {item.ProductName}. " +
+                            $"Available: {currentStock}");
+                        return View(model);
+                    }
+                }
+
+                // 🚫 NO SAVE YET (STEP 6)
+                TempData["Success"] = "Stock validated. Ready to save sale.";
+                return RedirectToAction("New");
+            }
+
+            return View(model);
         }
-        // GET: Sales
-        public async Task<IActionResult> Index()
+
+        // =========================
+        // AUTOCOMPLETE ENDPOINT
+        // =========================
+        [HttpGet]
+        public IActionResult SearchProducts(string term)
         {
-            var tenantId = GetTenantId();
+            if (string.IsNullOrWhiteSpace(term))
+                return Json(new List<object>());
 
-            var sales = await _context.Sales
-                .Where(s => s.TenantId == tenantId)
-                .OrderByDescending(s => s.SaleDate)
-                .ToListAsync();
+            var results = _context.Products
+                .Where(p => p.IsActive)
+                .Where(p =>
+                    p.Name.Contains(term) ||
+                    (p.SKU != null && p.SKU.Contains(term)))
+                .OrderBy(p => p.Name)
+                .Take(8)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    label = p.Name + " (TZS " + p.SellingPrice.ToString("N0") + ")",
+                    value = p.Name
+                })
+                .ToList();
 
-            return View(sales);
+            return Json(results);
         }
 
+        // =========================
+        // HELPERS
+        // =========================
+        private void LoadProducts()
+        {
+            ViewBag.Products = _context.Products
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.Name)
+                .Select(p => new SelectListItem
+                {
+                    Value = p.Id.ToString(),
+                    Text = p.Name
+                })
+                .ToList();
+        }
+
+        private int GetCurrentStock(int productId)
+        {
+            return _context.InventoryTransactions
+                .Where(t => t.ProductId == productId)
+                .Sum(t => t.QuantityChange);
+        }
     }
 }
