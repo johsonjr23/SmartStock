@@ -290,13 +290,6 @@ namespace SmartStock.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("PaymentType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("SaleDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
@@ -524,7 +517,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Categories")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Tenant");
@@ -551,17 +544,19 @@ namespace SmartStock.Migrations
                 {
                     b.HasOne("SmartStock.Models.Category", "Category")
                         .WithMany("Products")
-                        .HasForeignKey("CategoryId");
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Products")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Unit", "UnitNavigation")
                         .WithMany("Products")
-                        .HasForeignKey("UnitId");
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Category");
 
@@ -574,12 +569,13 @@ namespace SmartStock.Migrations
                 {
                     b.HasOne("SmartStock.Models.Supplier", "Supplier")
                         .WithMany("Purchases")
-                        .HasForeignKey("SupplierId");
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Purchases")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Supplier");
@@ -592,7 +588,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Product", "Product")
                         .WithMany("PurchaseItems")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Purchase", "Purchase")
@@ -620,7 +616,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Product", "Product")
                         .WithMany("SaleItems")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Sale", "Sale")
@@ -639,13 +635,13 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Product", "Product")
                         .WithMany("StockHistories")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("StockHistories")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Product");
@@ -658,7 +654,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Suppliers")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Tenant");

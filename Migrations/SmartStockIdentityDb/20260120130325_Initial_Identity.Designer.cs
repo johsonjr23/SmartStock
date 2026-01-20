@@ -12,8 +12,8 @@ using SmartStock.Data;
 namespace SmartStock.Migrations.SmartStockIdentityDb
 {
     [DbContext(typeof(SmartStockIdentityDbContext))]
-    [Migration("20251221120507_AddTenantIdColumnToAspNetUsers")]
-    partial class AddTenantIdColumnToAspNetUsers
+    [Migration("20260120130325_Initial_Identity")]
+    partial class Initial_Identity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

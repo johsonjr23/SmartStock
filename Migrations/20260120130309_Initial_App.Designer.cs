@@ -12,8 +12,8 @@ using SmartStock.Data;
 namespace SmartStock.Migrations
 {
     [DbContext(typeof(SmartStockDbContext))]
-    [Migration("20251228173842_AddSaleIdToInventoryTransactions")]
-    partial class AddSaleIdToInventoryTransactions
+    [Migration("20260120130309_Initial_App")]
+    partial class Initial_App
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -111,6 +111,10 @@ namespace SmartStock.Migrations
                     b.Property<int>("QuantityChange")
                         .HasColumnType("int");
 
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int?>("SaleId")
                         .HasColumnType("int");
 
@@ -123,6 +127,8 @@ namespace SmartStock.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("SaleId");
 
                     b.ToTable("InventoryTransactions");
                 });
@@ -146,6 +152,9 @@ namespace SmartStock.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("(sysdatetime())");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -162,9 +171,6 @@ namespace SmartStock.Migrations
 
                     b.Property<decimal>("SellingPrice")
                         .HasColumnType("decimal(18, 2)");
-
-                    b.Property<int>("Stock")
-                        .HasColumnType("int");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -287,13 +293,6 @@ namespace SmartStock.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("PaymentType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("SaleDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
@@ -329,6 +328,9 @@ namespace SmartStock.Migrations
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("SellingPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("SubTotal")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("decimal(29, 2)")
@@ -336,9 +338,6 @@ namespace SmartStock.Migrations
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
-
-                    b.Property<decimal>("SellingPrice")
-                        .HasColumnType("decimal(18, 2)");
 
                     b.HasKey("Id");
 
@@ -521,7 +520,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Categories")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Tenant");
@@ -535,24 +534,32 @@ namespace SmartStock.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SmartStock.Models.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId");
+
                     b.Navigation("Product");
+
+                    b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("SmartStock.Models.Product", b =>
                 {
                     b.HasOne("SmartStock.Models.Category", "Category")
                         .WithMany("Products")
-                        .HasForeignKey("CategoryId");
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Products")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Unit", "UnitNavigation")
                         .WithMany("Products")
-                        .HasForeignKey("UnitId");
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Category");
 
@@ -565,12 +572,13 @@ namespace SmartStock.Migrations
                 {
                     b.HasOne("SmartStock.Models.Supplier", "Supplier")
                         .WithMany("Purchases")
-                        .HasForeignKey("SupplierId");
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Purchases")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Supplier");
@@ -583,7 +591,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Product", "Product")
                         .WithMany("PurchaseItems")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Purchase", "Purchase")
@@ -611,7 +619,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Product", "Product")
                         .WithMany("SaleItems")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Sale", "Sale")
@@ -630,13 +638,13 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Product", "Product")
                         .WithMany("StockHistories")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("StockHistories")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Product");
@@ -649,7 +657,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Tenant", "Tenant")
                         .WithMany("Suppliers")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Tenant");

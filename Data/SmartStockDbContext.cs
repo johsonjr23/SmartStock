@@ -38,6 +38,8 @@ public partial class SmartStockDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<Category>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -46,7 +48,8 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200);
 
             entity.HasOne(d => d.Tenant).WithMany(p => p.Categories)
-                .HasForeignKey(d => d.TenantId);
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Product>(entity =>
@@ -64,13 +67,16 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.Unit).HasMaxLength(50);
 
             entity.HasOne(d => d.Category).WithMany(p => p.Products)
-                .HasForeignKey(d => d.CategoryId);
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(d => d.Tenant).WithMany(p => p.Products)
-                .HasForeignKey(d => d.TenantId);
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(d => d.UnitNavigation).WithMany(p => p.Products)
-                .HasForeignKey(d => d.UnitId);
+                .HasForeignKey(d => d.UnitId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Purchase>(entity =>
@@ -82,10 +88,12 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.Supplier).WithMany(p => p.Purchases)
-                .HasForeignKey(d => d.SupplierId);
+                .HasForeignKey(d => d.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(d => d.Tenant).WithMany(p => p.Purchases)
-                .HasForeignKey(d => d.TenantId);
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PurchaseItem>(entity =>
@@ -98,11 +106,15 @@ public partial class SmartStockDbContext : DbContext
                 .HasComputedColumnSql("([Quantity]*[BuyingPrice])", false)
                 .HasColumnType("decimal(29, 2)");
 
-            entity.HasOne(d => d.Product).WithMany(p => p.PurchaseItems)
-                .HasForeignKey(d => d.ProductId);
-
+            // Keep: Purchase -> PurchaseItems cascade (owned children)
             entity.HasOne(d => d.Purchase).WithMany(p => p.PurchaseItems)
-                .HasForeignKey(d => d.PurchaseId);
+                .HasForeignKey(d => d.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Block: Product delete if it has purchase history
+            entity.HasOne(d => d.Product).WithMany(p => p.PurchaseItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Sale>(entity =>
@@ -120,19 +132,21 @@ public partial class SmartStockDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.SellingPrice)
-       .HasColumnType("decimal(18,2)");
+            entity.Property(e => e.SellingPrice).HasColumnType("decimal(18,2)");
 
             entity.Property(e => e.SubTotal)
                 .HasComputedColumnSql("([Quantity]*[SellingPrice])", false)
-
                 .HasColumnType("decimal(29, 2)");
 
-            entity.HasOne(d => d.Product).WithMany(p => p.SaleItems)
-                .HasForeignKey(d => d.ProductId);
-
+            // Keep: Sale -> SaleItems cascade (owned children)
             entity.HasOne(d => d.Sale).WithMany(p => p.SaleItems)
-                .HasForeignKey(d => d.SaleId);
+                .HasForeignKey(d => d.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // CRITICAL FIX: Product -> SaleItems must NOT cascade (prevents multiple cascade paths)
+            entity.HasOne(d => d.Product).WithMany(p => p.SaleItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<StockHistory>(entity =>
@@ -144,10 +158,12 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.Remarks).HasMaxLength(255);
 
             entity.HasOne(d => d.Product).WithMany(p => p.StockHistories)
-                .HasForeignKey(d => d.ProductId);
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(d => d.Tenant).WithMany(p => p.StockHistories)
-                .HasForeignKey(d => d.TenantId);
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Supplier>(entity =>
@@ -161,7 +177,8 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.Phone).HasMaxLength(50);
 
             entity.HasOne(d => d.Tenant).WithMany(p => p.Suppliers)
-                .HasForeignKey(d => d.TenantId);
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Tenant>(entity =>
@@ -185,4 +202,5 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
         });
     }
+
 }
