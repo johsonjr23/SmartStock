@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SmartStock.Data;
@@ -7,11 +8,14 @@ using SmartStock.ViewModels;
 
 namespace SmartStock.Controllers
 {
-    public class SalesController : Controller
+    public class SalesController : BaseController
     {
         private readonly SmartStockDbContext _context;
 
-        public SalesController(SmartStockDbContext context)
+        public SalesController(
+            SmartStockDbContext context,
+            UserManager<ApplicationUser> userManager
+        ) : base(userManager)
         {
             _context = context;
         }
@@ -32,11 +36,13 @@ namespace SmartStock.Controllers
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult New(
+        public async Task<IActionResult> New(
             CreateSaleViewModel model,
             string action,
             int? removeIndex)
         {
+            var tenantId = GetTenantId();
+
             model.Items ??= new();
 
             // -------------------------
@@ -47,31 +53,36 @@ namespace SmartStock.Controllers
                 if (string.IsNullOrWhiteSpace(model.ProductSearch))
                 {
                     ModelState.AddModelError("", "Type a product name or SKU");
+                    RefreshAvailableStock(model, tenantId);
+                    LoadProducts();
                     return View(model);
                 }
 
                 var search = model.ProductSearch.Trim();
 
-                var product = _context.Products
+                var product = await _context.Products
+                    .Where(p => p.TenantId == tenantId)
                     .Where(p => p.IsActive)
                     .Where(p =>
                         p.Name.Contains(search) ||
                         (p.SKU != null && p.SKU.Contains(search)))
                     .OrderBy(p => p.Name)
-                    .FirstOrDefault();
+                    .FirstOrDefaultAsync();
 
                 if (product == null)
                 {
                     ModelState.AddModelError("", "Product not found");
+                    RefreshAvailableStock(model, tenantId);
+                    LoadProducts();
                     return View(model);
                 }
 
-                var existingItem = model.Items
-                    .FirstOrDefault(i => i.ProductId == product.Id);
+                var existingItem = model.Items.FirstOrDefault(i => i.ProductId == product.Id);
 
                 if (existingItem != null)
                 {
                     existingItem.Quantity += 1;
+                    // Don't set AvailableStock here; we refresh for all items below
                 }
                 else
                 {
@@ -79,13 +90,16 @@ namespace SmartStock.Controllers
                     {
                         ProductId = product.Id,
                         ProductName = product.Name,
-                        UnitPrice = product.SellingPrice,
-                        Quantity = 1,
-                        AvailableStock = GetCurrentStock(product.Id)
+                        UnitPrice = product.SellingPrice, // display
+                        Quantity = 1
+                        // AvailableStock will be set by RefreshAvailableStock below
                     });
                 }
 
                 model.ProductSearch = "";
+
+                RefreshAvailableStock(model, tenantId);
+                LoadProducts();
                 return View(model);
             }
 
@@ -97,52 +111,125 @@ namespace SmartStock.Controllers
                 removeIndex.Value < model.Items.Count)
             {
                 model.Items.RemoveAt(removeIndex.Value);
+
+                RefreshAvailableStock(model, tenantId);
+                LoadProducts();
                 return View(model);
             }
 
             // -------------------------
-            // COMPLETE SALE (WITH STOCK VALIDATION)
+            // COMPLETE SALE (ATOMIC CHECKOUT)
             // -------------------------
             if (action == "complete")
             {
                 if (model.Items.Count == 0)
                 {
                     ModelState.AddModelError("", "Add at least one item");
+                    RefreshAvailableStock(model, tenantId);
+                    LoadProducts();
                     return View(model);
                 }
 
-                // 🔒 STOCK VALIDATION
-                foreach (var item in model.Items)
+                if (!TryValidateModel(model))
                 {
-                    var currentStock = GetCurrentStock(item.ProductId);
-
-                    if (item.Quantity > currentStock)
-                    {
-                        ModelState.AddModelError("",
-                            $"Not enough stock for {item.ProductName}. " +
-                            $"Available: {currentStock}");
-                        return View(model);
-                    }
+                    RefreshAvailableStock(model, tenantId);
+                    LoadProducts();
+                    return View(model);
                 }
 
-                // 🚫 NO SAVE YET (STEP 6)
-                TempData["Success"] = "Stock validated. Ready to save sale.";
-                return RedirectToAction("New");
+                await using var tx = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    var sale = new Sale
+                    {
+                        TenantId = tenantId,
+                        TotalAmount = 0m
+                    };
+
+                    _context.Sales.Add(sale);
+                    await _context.SaveChangesAsync();
+
+                    decimal total = 0m;
+
+                    foreach (var item in model.Items.OrderBy(i => i.ProductId))
+                    {
+                        await LockProductRowAsync(tenantId, item.ProductId);
+
+                        var product = await _context.Products
+                            .Where(p => p.TenantId == tenantId && p.IsActive)
+                            .FirstOrDefaultAsync(p => p.Id == item.ProductId);
+
+                        if (product == null)
+                            throw new Exception("Product not found or inactive");
+
+                        var currentStock = GetCurrentStock(product.Id, tenantId);
+
+                        if (item.Quantity > currentStock)
+                            throw new Exception(
+                                $"Not enough stock for {product.Name}. Available: {currentStock}");
+
+                        var unitPrice = product.SellingPrice;
+
+                        _context.SaleItems.Add(new SaleItem
+                        {
+                            SaleId = sale.Id,
+                            TenantId = tenantId,
+                            ProductId = product.Id,
+                            Quantity = item.Quantity,
+                            SellingPrice = unitPrice
+                        });
+
+                        _context.InventoryTransactions.Add(new InventoryTransaction
+                        {
+                            TenantId = tenantId,
+                            ProductId = product.Id,
+                            SaleId = sale.Id,
+                            QuantityChange = -item.Quantity,
+                            TransactionType = InventoryTransactionType.Sale
+                        });
+
+                        total += unitPrice * item.Quantity;
+                    }
+
+                    sale.TotalAmount = total;
+                    await _context.SaveChangesAsync();
+
+                    await tx.CommitAsync();
+                    TempData["Success"] = "Sale completed successfully";
+                    return RedirectToAction("New");
+                }
+                catch (Exception ex)
+                {
+                    await tx.RollbackAsync();
+                    ModelState.AddModelError("", ex.Message);
+
+                    // IMPORTANT: keep AvailableStock correct on re-render
+                    RefreshAvailableStock(model, tenantId);
+
+                    LoadProducts();
+                    return View(model);
+                }
             }
 
+            // Default fallback (if action is unknown)
+            RefreshAvailableStock(model, tenantId);
+            LoadProducts();
             return View(model);
         }
-
         // =========================
         // AUTOCOMPLETE ENDPOINT
         // =========================
         [HttpGet]
         public IActionResult SearchProducts(string term)
         {
+            var tenantId = GetTenantId();
+
             if (string.IsNullOrWhiteSpace(term))
                 return Json(new List<object>());
 
             var results = _context.Products
+                .Where(p => p.TenantId == tenantId)
                 .Where(p => p.IsActive)
                 .Where(p =>
                     p.Name.Contains(term) ||
@@ -160,12 +247,16 @@ namespace SmartStock.Controllers
             return Json(results);
         }
 
+
         // =========================
         // HELPERS
         // =========================
         private void LoadProducts()
         {
+            var tenantId = GetTenantId();
+
             ViewBag.Products = _context.Products
+                .Where(p => p.TenantId == tenantId)
                 .Where(p => p.IsActive)
                 .OrderBy(p => p.Name)
                 .Select(p => new SelectListItem
@@ -176,11 +267,33 @@ namespace SmartStock.Controllers
                 .ToList();
         }
 
-        private int GetCurrentStock(int productId)
+        private int GetCurrentStock(int productId, int tenantId)
         {
             return _context.InventoryTransactions
+                .Where(t => t.TenantId == tenantId)
                 .Where(t => t.ProductId == productId)
                 .Sum(t => t.QuantityChange);
         }
+
+        private async Task LockProductRowAsync(int tenantId, int productId)
+        {
+            // Locks the specific product row for the duration of the current transaction.
+            await _context.Database.ExecuteSqlRawAsync(@"
+        SELECT 1
+        FROM Products WITH (UPDLOCK, HOLDLOCK, ROWLOCK)
+        WHERE TenantId = {0} AND Id = {1}", tenantId, productId);
+        }
+
+        private void RefreshAvailableStock(CreateSaleViewModel model, int tenantId)
+        {
+            if (model.Items == null) return;
+
+            foreach (var item in model.Items)
+            {
+                item.AvailableStock = GetCurrentStock(item.ProductId, tenantId);
+            }
+        }
+
+
     }
 }

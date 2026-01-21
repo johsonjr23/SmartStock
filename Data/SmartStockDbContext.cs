@@ -40,6 +40,8 @@ public partial class SmartStockDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        
+
         modelBuilder.Entity<Category>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -201,6 +203,12 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.Name).HasMaxLength(100);
         });
+
+        modelBuilder.Entity<InventoryTransaction>(entity =>
+        {
+            entity.HasIndex(e => new { e.TenantId, e.ProductId });
+        });
+
     }
 
 }

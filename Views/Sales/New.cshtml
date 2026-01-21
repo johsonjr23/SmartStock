@@ -6,6 +6,17 @@
 
 <h2>New Sale</h2>
 
+@* ===== FEEDBACK MESSAGES ===== *@
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["Success"]
+    </div>
+}
+
+<div asp-validation-summary="All" class="alert alert-danger"></div>
+
+
 <form asp-action="New" method="post">
 
     <!-- =====================
@@ -82,19 +93,33 @@
                         </td>
 
                         <td>
+                           
+
+                           @* <input asp-for="Items[@i].Quantity"
+                                   class="form-control js-qty"
+                                   data-index="@i"
+                                   min="1" /> *@
+
+
                             <input asp-for="Items[@i].Quantity"
-                                   class="form-control"
-                                   onchange="this.form.submit()" />
+                                   class="form-control js-qty"
+                                   data-stock="@Model.Items[i].AvailableStock"
+                                   min="1" />
+                            <small class="text-danger js-stock-msg" style="display:none;"></small>
+
+
+
                         </td>
 
                         <td>
                             <input asp-for="Items[@i].UnitPrice"
-                                   class="form-control"
+                                   class="form-control js-price"
                                    readonly />
                         </td>
 
                         <td>
-                            <strong>@Model.Items[i].SubTotal.ToString("N0")</strong>
+                           @* <strong>@Model.Items[i].SubTotal.ToString("N0")</strong> *@
+                            <span class="js-subtotal">@Model.Items[i].SubTotal.ToString("N0")</span>
                         </td>
 
                         <td>
@@ -119,7 +144,7 @@
         <div class="col-md-6 text-end">
             <h4>
                 Total:
-                <span class="text-success">
+                <span class="text-success"    id="js-total">
                     @Model.TotalAmount.ToString("N0")
                 </span>
             </h4>
@@ -137,12 +162,15 @@
             + Add Product
         </button>
 
+
         <button type="submit"
                 name="action"
                 value="complete"
+                id="btn-complete"
                 class="btn btn-primary btn-lg">
             COMPLETE SALE
         </button>
+
     </div>
 
 </form>
@@ -156,7 +184,8 @@
         const list = document.getElementById("productSuggestions");
         let timer = null;
 
-        input.addEventListener("keyup", function () {
+        // ===== AUTOCOMPLETE =====
+        input?.addEventListener("keyup", function () {
             clearTimeout(timer);
 
             const term = input.value.trim();
@@ -169,11 +198,11 @@
 
             timer = setTimeout(() => {
                 fetch(`/Sales/SearchProducts?term=${encodeURIComponent(term)}`)
-                    .then(r => r.json())
+                    .then(r => r.ok ? r.json() : Promise.reject(r))
                     .then(data => {
                         list.innerHTML = "";
 
-                        if (data.length === 0) {
+                        if (!data || data.length === 0) {
                             list.style.display = "none";
                             return;
                         }
@@ -183,39 +212,108 @@
                             li.className = "list-group-item list-group-item-action";
                             li.textContent = item.label;
 
+                            li.addEventListener("click", () => {
+                                input.value = item.value;
+                                list.style.display = "none";
 
-                                    li.onclick = () => {
-            input.value = item.value;
-            list.style.display = "none";
+                                // AUTO-ADD TO CART
+                                const form = input.closest("form");
+                                if (!form) return;
 
-            // 🔥 AUTO-ADD TO CART
-            const form = input.closest("form");
+                                // Prevent stacking hidden inputs on repeated clicks
+                                const existing = form.querySelector('input[name="action"][data-autogen="1"]');
+                                if (existing) existing.remove();
 
-            // create hidden input: action=add
-            const actionInput = document.createElement("input");
-            actionInput.type = "hidden";
-            actionInput.name = "action";
-            actionInput.value = "add";
+                                const actionInput = document.createElement("input");
+                                actionInput.type = "hidden";
+                                actionInput.name = "action";
+                                actionInput.value = "add";
+                                actionInput.setAttribute("data-autogen", "1");
 
-            form.appendChild(actionInput);
-            form.submit();
-        };
+                                form.appendChild(actionInput);
+                                form.submit();
+                            });
 
-
-                           
                             list.appendChild(li);
                         });
 
                         list.style.display = "block";
+                    })
+                    .catch(() => {
+                        // If endpoint errors, just hide suggestions (don’t crash UI)
+                        list.style.display = "none";
+                        list.innerHTML = "";
                     });
             }, 300);
         });
 
-        // Hide suggestions when clicking outside
+        // Hide suggestions when clicking outside  ✅ (THIS WAS BROKEN IN YOUR FILE)
         document.addEventListener("click", function (e) {
+            if (!input) return;
             if (!input.contains(e.target) && !list.contains(e.target)) {
                 list.style.display = "none";
             }
         });
+
+        // ===== CART RECALC + STOCK VALIDATION =====
+        function formatN0(n) {
+            return Math.round(n).toLocaleString();
+        }
+
+        function recalcCart() {
+            let total = 0;
+
+            document.querySelectorAll("tbody tr").forEach(row => {
+                const qtyInput = row.querySelector(".js-qty");
+                const priceInput = row.querySelector(".js-price");
+                const subtotalSpan = row.querySelector(".js-subtotal");
+                const msg = row.querySelector(".js-stock-msg");
+
+                // Skip the "No items added yet" row
+                if (!qtyInput || !priceInput || !subtotalSpan) return;
+
+                const qty = parseInt(qtyInput.value || "0", 10);
+                const price = parseFloat(priceInput.value || "0");
+
+                const sub = Math.max(0, qty) * Math.max(0, price);
+                subtotalSpan.textContent = formatN0(sub);
+                total += sub;
+
+                // Stock validation (client-side display only)
+                const available = parseInt(qtyInput.dataset.stock || "0", 10);
+
+                if (available >= 0 && qty > available) {
+                    qtyInput.classList.add("is-invalid");
+                    if (msg) {
+                        msg.style.display = "block";
+                        msg.textContent = `Only ${available} in stock`;
+                    }
+                } else {
+                    qtyInput.classList.remove("is-invalid");
+                    if (msg) {
+                        msg.style.display = "none";
+                        msg.textContent = "";
+                    }
+                }
+            });
+
+            const totalEl = document.getElementById("js-total");
+            if (totalEl) totalEl.textContent = formatN0(total);
+
+            // Disable complete if any invalid qty exists
+            const hasInvalid = document.querySelectorAll(".js-qty.is-invalid").length > 0;
+            const btn = document.getElementById("btn-complete");
+            if (btn) btn.disabled = hasInvalid;
+        }
+
+        // Live update totals/validation as cashier types
+        document.addEventListener("input", function (e) {
+            if (e.target.classList && e.target.classList.contains("js-qty")) {
+                recalcCart();
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", recalcCart);
     </script>
 }
+
