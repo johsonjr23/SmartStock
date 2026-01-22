@@ -1,0 +1,136 @@
+﻿@model SmartStock.ViewModels.SaleDetailsViewModel
+@{
+    ViewData["Title"] = "Sale Receipt";
+}
+<style>
+    .receipt-wrap {
+        max-width: 720px;
+        margin: 0 auto;
+    }
+
+    .receipt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .muted {
+        opacity: 0.75;
+    }
+
+    .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    /* PRINT: make it look like a POS receipt */
+    @@media print {
+        /* Hide anything that comes from _Layout (navbar/footer/etc) */
+        header, nav, footer, .navbar, .footer, .no-print {
+            display: none !important;
+        }
+        /* Remove extra page chrome */
+        body {
+            background: #fff !important;
+        }
+        /* Thermal-style width */
+        .receipt-wrap {
+            max-width: 80mm !important;
+            margin: 0 !important;
+        }
+        /* Remove card shadows/borders */
+        .card, .shadow, .shadow-sm {
+            box-shadow: none !important;
+            border: none !important;
+        }
+        /* Prevent link URLs printing */
+        a[href]:after {
+            content: "" !important;
+        }
+    }
+
+    @@page {
+        size: 80mm auto;
+        margin: 6mm;
+    }
+</style>
+
+<div class="receipt-wrap">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <div>
+            <a asp-action="Index" asp-controller="Sales" class="btn btn-outline-secondary btn-sm">Sales</a>
+            <a asp-action="New" asp-controller="Sales" class="btn btn-outline-primary btn-sm">New Sale</a>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">Print</button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <div class="receipt-header mb-3">
+                <div>
+                    <h4 class="mb-1">Receipt</h4>
+                    <div class="muted">Thank you for your purchase.</div>
+                </div>
+
+                <div class="text-end">
+                    <div class="mono"><strong>@Model.DisplayInvoiceNumber</strong></div>
+                    <div class="muted">@Model.SaleDate.ToString("yyyy-MM-dd HH:mm")</div>
+                    <div class="muted">Payment: @Model.PaymentType</div>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Unit</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div><strong>@item.ProductName</strong></div>
+                                    @if (!string.IsNullOrWhiteSpace(item.SKU))
+                                    {
+                                        <div class="muted mono">SKU: @item.SKU</div>
+                                    }
+                                </td>
+                                <td class="text-end">@item.Quantity</td>
+                                <td class="text-end">@item.UnitPrice.ToString("N2")</td>
+                                <td class="text-end">@item.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <hr />
+
+            <div class="d-flex justify-content-end">
+                <div style="min-width: 280px;">
+                    <div class="d-flex justify-content-between">
+                        <div class="muted">Items</div>
+                        <div>@Model.Items.Count</div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <div class="h5 mb-0">Total</div>
+                        <div class="h5 mb-0">@Model.TotalAmount.ToString("N2")</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="mt-3 muted no-print">
+        Tip: Use “Print” for a clean receipt output. 
+    </div>
+</div>

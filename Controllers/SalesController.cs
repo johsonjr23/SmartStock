@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -82,7 +86,6 @@ namespace SmartStock.Controllers
                 if (existingItem != null)
                 {
                     existingItem.Quantity += 1;
-                    // Don't set AvailableStock here; we refresh for all items below
                 }
                 else
                 {
@@ -90,9 +93,8 @@ namespace SmartStock.Controllers
                     {
                         ProductId = product.Id,
                         ProductName = product.Name,
-                        UnitPrice = product.SellingPrice, // display
+                        UnitPrice = product.SellingPrice, // display only
                         Quantity = 1
-                        // AvailableStock will be set by RefreshAvailableStock below
                     });
                 }
 
@@ -145,6 +147,8 @@ namespace SmartStock.Controllers
                     {
                         TenantId = tenantId,
                         TotalAmount = 0m
+                        // NOTE: Your current Sale entity (per compile errors) does not have SaleDate/PaymentType.
+                        // We will not set them here.
                     };
 
                     _context.Sales.Add(sale);
@@ -166,10 +170,10 @@ namespace SmartStock.Controllers
                         var currentStock = GetCurrentStock(product.Id, tenantId);
 
                         if (item.Quantity > currentStock)
-                            throw new Exception(
-                                $"Not enough stock for {product.Name}. Available: {currentStock}");
+                            throw new Exception($"Not enough stock for {product.Name}. Available: {currentStock}");
 
                         var unitPrice = product.SellingPrice;
+                        var lineTotal = unitPrice * item.Quantity;
 
                         _context.SaleItems.Add(new SaleItem
                         {
@@ -177,7 +181,8 @@ namespace SmartStock.Controllers
                             TenantId = tenantId,
                             ProductId = product.Id,
                             Quantity = item.Quantity,
-                            SellingPrice = unitPrice
+                            SellingPrice = unitPrice,
+                            SubTotal = lineTotal
                         });
 
                         _context.InventoryTransactions.Add(new InventoryTransaction
@@ -189,7 +194,7 @@ namespace SmartStock.Controllers
                             TransactionType = InventoryTransactionType.Sale
                         });
 
-                        total += unitPrice * item.Quantity;
+                        total += lineTotal;
                     }
 
                     sale.TotalAmount = total;
@@ -197,26 +202,73 @@ namespace SmartStock.Controllers
 
                     await tx.CommitAsync();
                     TempData["Success"] = "Sale completed successfully";
-                    return RedirectToAction("New");
+
+                    // STEP 4: redirect to receipt/details
+                    return RedirectToAction("Details", new { id = sale.Id });
                 }
                 catch (Exception ex)
                 {
                     await tx.RollbackAsync();
                     ModelState.AddModelError("", ex.Message);
 
-                    // IMPORTANT: keep AvailableStock correct on re-render
                     RefreshAvailableStock(model, tenantId);
-
                     LoadProducts();
                     return View(model);
                 }
             }
 
-            // Default fallback (if action is unknown)
+            // Default fallback
             RefreshAvailableStock(model, tenantId);
             LoadProducts();
             return View(model);
         }
+
+        // =========================
+        // STEP 4: /Sales/Details/{id}
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var tenantId = GetTenantId();
+
+            var sale = await _context.Sales
+                .Where(s => s.TenantId == tenantId && s.Id == id)
+                .Include(s => s.SaleItems)
+                    .ThenInclude(si => si.Product)
+                .FirstOrDefaultAsync();
+
+            if (sale == null)
+                return NotFound();
+
+            // NOTE: Your Sale entity does not have SaleDate/PaymentType (compile errors).
+            // We use CreatedAt as the receipt date, and a safe placeholder for payment.
+            var vm = new SaleDetailsViewModel
+            {
+                Id = sale.Id,
+                DisplayInvoiceNumber = !string.IsNullOrWhiteSpace(sale.InvoiceNumber)
+                    ? sale.InvoiceNumber!
+                    : $"SALE-{sale.Id:D6}",
+
+                SaleDate = sale.CreatedAt,   // fallback date
+                PaymentType = "N/A",         // until you add/store payment type in Sale
+                TotalAmount = sale.TotalAmount,
+
+                Items = sale.SaleItems
+                    .OrderBy(i => i.Id)
+                    .Select(i => new SaleDetailsViewModel.SaleDetailsItemRow
+                    {
+                        ProductId = i.ProductId,
+                        ProductName = i.Product != null ? i.Product.Name : $"Product #{i.ProductId}",
+                        SKU = i.Product != null ? i.Product.SKU : null,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.SellingPrice
+                    })
+                    .ToList()
+            };
+
+            return View(vm);
+        }
+
         // =========================
         // AUTOCOMPLETE ENDPOINT
         // =========================
@@ -245,6 +297,22 @@ namespace SmartStock.Controllers
                 .ToList();
 
             return Json(results);
+        }
+        // =========================
+        // GET: /Sales
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var tenantId = GetTenantId();
+
+            var sales = await _context.Sales
+                .Where(s => s.TenantId == tenantId)
+                .OrderByDescending(s => s.Id)
+                .Take(200)
+                .ToListAsync();
+
+            return View(sales);
         }
 
 
@@ -277,11 +345,10 @@ namespace SmartStock.Controllers
 
         private async Task LockProductRowAsync(int tenantId, int productId)
         {
-            // Locks the specific product row for the duration of the current transaction.
             await _context.Database.ExecuteSqlRawAsync(@"
-        SELECT 1
-        FROM Products WITH (UPDLOCK, HOLDLOCK, ROWLOCK)
-        WHERE TenantId = {0} AND Id = {1}", tenantId, productId);
+SELECT 1
+FROM Products WITH (UPDLOCK, HOLDLOCK, ROWLOCK)
+WHERE TenantId = {0} AND Id = {1}", tenantId, productId);
         }
 
         private void RefreshAvailableStock(CreateSaleViewModel model, int tenantId)
@@ -293,7 +360,5 @@ namespace SmartStock.Controllers
                 item.AvailableStock = GetCurrentStock(item.ProductId, tenantId);
             }
         }
-
-
     }
 }
