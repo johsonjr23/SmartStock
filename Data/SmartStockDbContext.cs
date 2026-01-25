@@ -126,8 +126,23 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.InvoiceNumber).HasMaxLength(100);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.RefundReason).HasMaxLength(500);
+
+            entity.HasOne(e => e.OriginalSale)
+                .WithMany()
+                .HasForeignKey(e => e.OriginalSaleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Step 5 fields
+            entity.Property(e => e.Status)
+                .HasConversion<int>()
+                .HasDefaultValue(SaleStatus.Completed);
+
+            entity.Property(e => e.VoidReason).HasMaxLength(500);
+
             // NOTE: Tenant navigation intentionally removed
         });
+
 
         modelBuilder.Entity<SaleItem>(entity =>
         {
@@ -207,7 +222,19 @@ public partial class SmartStockDbContext : DbContext
         modelBuilder.Entity<InventoryTransaction>(entity =>
         {
             entity.HasIndex(e => new { e.TenantId, e.ProductId });
+
+            // Explicit relationships (safer for Step 5 reversals and prevents accidental deletes)
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Sale)
+                .WithMany()
+                .HasForeignKey(e => e.SaleId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
+
 
     }
 

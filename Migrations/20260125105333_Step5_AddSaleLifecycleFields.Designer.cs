@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartStock.Data;
 
@@ -11,9 +12,11 @@ using SmartStock.Data;
 namespace SmartStock.Migrations
 {
     [DbContext(typeof(SmartStockDbContext))]
-    partial class SmartStockDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260125105333_Step5_AddSaleLifecycleFields")]
+    partial class Step5_AddSaleLifecycleFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -295,19 +298,6 @@ namespace SmartStock.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("OriginalSaleId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RefundReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("RefundedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("RefundedBy")
-                        .HasColumnType("int");
-
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -330,8 +320,6 @@ namespace SmartStock.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OriginalSaleId");
 
                     b.HasIndex("TenantId");
 
@@ -640,18 +628,11 @@ namespace SmartStock.Migrations
 
             modelBuilder.Entity("SmartStock.Models.Sale", b =>
                 {
-                    b.HasOne("SmartStock.Models.Sale", "OriginalSale")
-                        .WithMany()
-                        .HasForeignKey("OriginalSaleId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("SmartStock.Models.Tenant", null)
                         .WithMany("Sales")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("OriginalSale");
                 });
 
             modelBuilder.Entity("SmartStock.Models.SaleItem", b =>

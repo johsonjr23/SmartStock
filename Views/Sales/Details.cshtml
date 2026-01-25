@@ -8,13 +8,6 @@
         margin: 0 auto;
     }
 
-    .receipt-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-    }
-
     .muted {
         opacity: 0.75;
     }
@@ -25,11 +18,10 @@
 
     /* PRINT: make it look like a POS receipt */
     @@media print {
-        /* Hide anything that comes from _Layout (navbar/footer/etc) */
         header, nav, footer, .navbar, .footer, .no-print {
             display: none !important;
         }
-        /* Remove extra page chrome */
+
         body {
             background: #fff !important;
         }
@@ -43,7 +35,7 @@
             box-shadow: none !important;
             border: none !important;
         }
-        /* Prevent link URLs printing */
+
         a[href]:after {
             content: "" !important;
         }
@@ -56,21 +48,121 @@
 </style>
 
 <div class="receipt-wrap">
+
+    <!-- Top buttons (no-print) -->
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
         <div>
             <a asp-action="Index" asp-controller="Sales" class="btn btn-outline-secondary btn-sm">Sales</a>
             <a asp-action="New" asp-controller="Sales" class="btn btn-outline-primary btn-sm">New Sale</a>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">Print</button>
+
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">Print</button>
+        </div>
     </div>
+
+    <!-- Actions (no-print): only show for Completed sales -->
+    @if (Model.Status == "Completed")
+    {
+        <div class="card mb-3 no-print">
+            <div class="card-body">
+
+                <!-- VOID -->
+                <form asp-action="Void" asp-controller="Sales" method="post" class="d-flex gap-2 align-items-center mb-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input name="reason" class="form-control form-control-sm" placeholder="Void reason (required)" />
+                    <button type="submit" class="btn btn-danger btn-sm"
+                            onclick="return confirm('Void this sale? This reverses inventory and stamps the receipt as VOID.');">
+                        Void Sale
+                    </button>
+                </form>
+
+                <!-- FULL REFUND -->
+                <form asp-action="RefundFull" asp-controller="Sales" method="post" class="d-flex gap-2 align-items-center">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input name="reason" class="form-control form-control-sm" placeholder="Refund reason (required)" />
+                    <button type="submit" class="btn btn-warning btn-sm"
+                            onclick="return confirm('Refund this sale in full? This returns stock and creates a REFUND receipt.');">
+                        Full Refund
+                    </button>
+                </form>
+
+            </div>
+        </div>
+    }
 
     <div class="card shadow-sm">
         <div class="card-body">
 
-            <div class="receipt-header mb-3">
+            <!-- TOP OF RECEIPT: VOID stamp -->
+            @if (Model.Status == "Voided")
+            {
+                <div class="alert alert-danger py-2 mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="h5 mb-1">VOID</div>
+                            @if (!string.IsNullOrWhiteSpace(Model.VoidReason))
+                            {
+                                <div class="mono">Reason: @Model.VoidReason</div>
+                            }
+                        </div>
+                        @if (Model.VoidedAt.HasValue)
+                        {
+                            <div class="text-end muted mono">@Model.VoidedAt.Value.ToString("yyyy-MM-dd HH:mm")</div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- TOP OF RECEIPT: REFUND stamp (this is a refund receipt) -->
+            @* Requires refund fields in SaleDetailsViewModel *@
+            @if (Model.Status == "Refunded" && Model.OriginalSaleId != null)
+            {
+                <div class="alert alert-warning py-2 mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="h5 mb-1">REFUND</div>
+                            <div class="mono">Original: SALE-@Model.OriginalSaleId.Value.ToString("D6")</div>
+                            @if (!string.IsNullOrWhiteSpace(Model.RefundReason))
+                            {
+                                <div class="mono">Reason: @Model.RefundReason</div>
+                            }
+                        </div>
+                        @if (Model.RefundedAt.HasValue)
+                        {
+                            <div class="text-end muted mono">@Model.RefundedAt.Value.ToString("yyyy-MM-dd HH:mm")</div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- If viewing original sale that was refunded, show a banner -->
+            @if (Model.Status == "Refunded" && Model.OriginalSaleId == null)
+            {
+                <div class="alert alert-warning py-2 mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="h6 mb-1">REFUNDED</div>
+                            @if (!string.IsNullOrWhiteSpace(Model.RefundReason))
+                            {
+                                <div class="mono">Reason: @Model.RefundReason</div>
+                            }
+                        </div>
+                        @if (Model.RefundedAt.HasValue)
+                        {
+                            <div class="text-end muted mono">@Model.RefundedAt.Value.ToString("yyyy-MM-dd HH:mm")</div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h4 class="mb-1">Receipt</h4>
-                    <div class="muted">Thank you for your purchase.</div>
+                    <h4 class="mb-1">SmartStock</h4>
+                    <div class="muted">Receipt</div>
                 </div>
 
                 <div class="text-end">
@@ -82,6 +174,7 @@
 
             <hr />
 
+            <!-- Items -->
             <div class="table-responsive">
                 <table class="table table-sm align-middle">
                     <thead>
@@ -114,6 +207,7 @@
 
             <hr />
 
+            <!-- Totals -->
             <div class="d-flex justify-content-end">
                 <div style="min-width: 280px;">
                     <div class="d-flex justify-content-between">
@@ -127,10 +221,13 @@
                 </div>
             </div>
 
+            <div class="text-center muted mt-3" style="font-size: 0.9rem;">
+                Thank you for your purchase.
+            </div>
         </div>
     </div>
 
     <div class="mt-3 muted no-print">
-        Tip: Use “Print” for a clean receipt output. 
+        Tip: Use “Print” for a clean receipt output.
     </div>
 </div>

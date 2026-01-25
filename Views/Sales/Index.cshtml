@@ -1,4 +1,6 @@
 ﻿@model List<SmartStock.Models.Sale>
+@using SmartStock.Models
+
 @{
     ViewData["Title"] = "Sales";
 }
@@ -7,6 +9,15 @@
     <h4 class="mb-0">Sales</h4>
     <a asp-action="New" class="btn btn-primary">New Sale</a>
 </div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
 
 @if (Model == null || Model.Count == 0)
 {
@@ -19,6 +30,7 @@ else
             <thead>
                 <tr>
                     <th>Sale</th>
+                    <th>Status</th>
                     <th class="text-end">Total</th>
                     <th class="text-end">Created</th>
                     <th class="text-end"></th>
@@ -33,10 +45,31 @@ else
                                                 ? s.InvoiceNumber
                                                 : $"SALE-{s.Id:D6}")
                         </td>
+
+                        <td>
+                            @if (s.Status == SaleStatus.Voided)
+                            {
+                                <span class="badge bg-danger">VOID</span>
+                            }
+                            else if (s.Status == SaleStatus.Refunded)
+                            {
+                                <span class="badge bg-warning text-dark">REFUNDED</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">COMPLETED</span>
+                            }
+                        </td>
+
                         <td class="text-end">@s.TotalAmount.ToString("N2")</td>
-                        <td class="text-end">@s.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+
                         <td class="text-end">
-                            <a asp-action="Details" asp-route-id="@s.Id"
+                            @s.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                        </td>
+
+                        <td class="text-end">
+                            <a asp-action="Details"
+                               asp-route-id="@s.Id"
                                class="btn btn-outline-secondary btn-sm">
                                 Details
                             </a>
@@ -45,5 +78,9 @@ else
                 }
             </tbody>
         </table>
+    </div>
+
+    <div class="text-muted small mt-2">
+        Showing latest @Model.Count sale(s).
     </div>
 }

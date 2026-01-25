@@ -11,6 +11,16 @@ namespace SmartStock.ViewModels
         public string PaymentType { get; set; } = "";
         public decimal TotalAmount { get; set; }
 
+        // ===== STATUS / VOID =====
+        public string Status { get; set; } = "";   // Completed, Voided, Refunded
+        public DateTime? VoidedAt { get; set; }
+        public string? VoidReason { get; set; }
+
+        // ===== REFUND =====
+        public int? OriginalSaleId { get; set; }   // If this is a refund
+        public DateTime? RefundedAt { get; set; }
+        public string? RefundReason { get; set; }
+
         public List<SaleDetailsItemRow> Items { get; set; } = new();
 
         public class SaleDetailsItemRow

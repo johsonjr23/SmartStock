@@ -146,8 +146,10 @@ namespace SmartStock.Controllers
                     var sale = new Sale
                     {
                         TenantId = tenantId,
-                        TotalAmount = 0m
-                        // NOTE: Your current Sale entity (per compile errors) does not have SaleDate/PaymentType.
+                        TotalAmount = 0m,
+                        Status = SaleStatus.Completed,
+                        CompletedAt = DateTime.UtcNow
+                        // NOTE: Your current Sale entity does not have SaleDate/PaymentType.
                         // We will not set them here.
                     };
 
@@ -240,8 +242,6 @@ namespace SmartStock.Controllers
             if (sale == null)
                 return NotFound();
 
-            // NOTE: Your Sale entity does not have SaleDate/PaymentType (compile errors).
-            // We use CreatedAt as the receipt date, and a safe placeholder for payment.
             var vm = new SaleDetailsViewModel
             {
                 Id = sale.Id,
@@ -252,6 +252,11 @@ namespace SmartStock.Controllers
                 SaleDate = sale.CreatedAt,   // fallback date
                 PaymentType = "N/A",         // until you add/store payment type in Sale
                 TotalAmount = sale.TotalAmount,
+
+                // Step 5.2 status info
+                Status = sale.Status.ToString(),
+                VoidedAt = sale.VoidedAt,
+                VoidReason = sale.VoidReason,
 
                 Items = sale.SaleItems
                     .OrderBy(i => i.Id)
@@ -268,6 +273,193 @@ namespace SmartStock.Controllers
 
             return View(vm);
         }
+
+        // =========================
+        // STEP 5.2: VOID SALE
+        // POST: /Sales/Void/{id}
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Void(int id, string reason)
+        {
+            var tenantId = GetTenantId();
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                TempData["Error"] = "Void reason is required.";
+                return RedirectToAction("Details", new { id });
+            }
+
+            await using var tx = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var sale = await _context.Sales
+                    .Where(s => s.TenantId == tenantId && s.Id == id)
+                    .Include(s => s.SaleItems)
+                    .FirstOrDefaultAsync();
+
+                if (sale == null)
+                    return NotFound();
+
+                if (sale.Status != SaleStatus.Completed)
+                {
+                    TempData["Error"] = $"Sale cannot be voided because it is {sale.Status}.";
+                    return RedirectToAction("Details", new { id });
+                }
+
+                sale.Status = SaleStatus.Voided;
+                sale.VoidedAt = DateTime.UtcNow;
+                sale.VoidReason = reason.Trim();
+
+                // Reverse inventory for each sale item
+                foreach (var item in sale.SaleItems)
+                {
+                    await LockProductRowAsync(tenantId, item.ProductId);
+
+                    _context.InventoryTransactions.Add(new InventoryTransaction
+                    {
+                        TenantId = tenantId,
+                        ProductId = item.ProductId,
+                        SaleId = sale.Id,
+                        QuantityChange = item.Quantity, // reversal (positive)
+                        TransactionType = InventoryTransactionType.Void
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                TempData["Success"] = "Sale voided successfully.";
+                return RedirectToAction("Details", new { id });
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("Details", new { id });
+            }
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RefundFull(int id, string reason)
+        {
+            var tenantId = GetTenantId();
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                TempData["Error"] = "Refund reason is required.";
+                return RedirectToAction("Details", new { id });
+            }
+
+            await using var tx = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Load original sale + items (tenant-scoped)
+                var original = await _context.Sales
+                    .Where(s => s.TenantId == tenantId && s.Id == id)
+                    .Include(s => s.SaleItems)
+                    .FirstOrDefaultAsync();
+
+                if (original == null)
+                    return NotFound();
+
+                if (original.Status == SaleStatus.Voided)
+                {
+                    TempData["Error"] = "Cannot refund a voided sale.";
+                    return RedirectToAction("Details", new { id });
+                }
+
+                if (original.Status == SaleStatus.Refunded)
+                {
+                    TempData["Error"] = "Sale is already refunded.";
+                    return RedirectToAction("Details", new { id });
+                }
+
+                if (original.Status != SaleStatus.Completed)
+                {
+                    TempData["Error"] = $"Sale cannot be refunded because it is {original.Status}.";
+                    return RedirectToAction("Details", new { id });
+                }
+
+                // Create refund sale record
+                var refundSale = new Sale
+                {
+                    TenantId = tenantId,
+                    TotalAmount = 0m, // set below
+                    Status = SaleStatus.Refunded,
+                    CompletedAt = DateTime.UtcNow,
+
+                    OriginalSaleId = original.Id,
+                    RefundedAt = DateTime.UtcNow,
+                    RefundReason = reason.Trim()
+
+                    // RefundedBy can be set later when you expose your user id in BaseController
+                };
+
+                _context.Sales.Add(refundSale);
+                await _context.SaveChangesAsync(); // get refundSale.Id
+
+                decimal refundTotal = 0m;
+
+                // For full refund: mirror all items
+                foreach (var item in original.SaleItems.OrderBy(i => i.ProductId))
+                {
+                    await LockProductRowAsync(tenantId, item.ProductId);
+
+                    // Create negative sale item (keeps quantities positive; price negative)
+                    var negativePrice = -item.SellingPrice;
+                    var lineTotal = negativePrice * item.Quantity;
+
+                    _context.SaleItems.Add(new SaleItem
+                    {
+                        SaleId = refundSale.Id,
+                        TenantId = tenantId,
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity,
+                        SellingPrice = negativePrice,
+                        SubTotal = lineTotal
+                    });
+
+                    // Inventory comes back (positive quantity change)
+                    _context.InventoryTransactions.Add(new InventoryTransaction
+                    {
+                        TenantId = tenantId,
+                        ProductId = item.ProductId,
+                        SaleId = refundSale.Id,
+                        QuantityChange = item.Quantity,
+                        TransactionType = InventoryTransactionType.Refund
+                    });
+
+                    refundTotal += lineTotal; // negative
+                }
+
+                refundSale.TotalAmount = refundTotal;
+
+                // Mark original as refunded to prevent duplicates
+                original.Status = SaleStatus.Refunded;
+                original.RefundedAt = refundSale.RefundedAt;
+                original.RefundReason = refundSale.RefundReason;
+
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                TempData["Success"] = "Full refund completed successfully.";
+                return RedirectToAction("Details", new { id = refundSale.Id }); // show refund receipt
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("Details", new { id });
+            }
+        }
+
+
+
 
         // =========================
         // AUTOCOMPLETE ENDPOINT
@@ -298,6 +490,7 @@ namespace SmartStock.Controllers
 
             return Json(results);
         }
+
         // =========================
         // GET: /Sales
         // =========================
@@ -314,7 +507,6 @@ namespace SmartStock.Controllers
 
             return View(sales);
         }
-
 
         // =========================
         // HELPERS
