@@ -1,0 +1,85 @@
+﻿@model SmartStock.ViewModels.ProfitReportViewModel
+
+<h2>Profit Report</h2>
+
+<form method="get" class="mb-3">
+    <label>From</label>
+    <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+    <label style="margin-left:10px;">To</label>
+    <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+    <button type="submit" class="btn btn-secondary" style="margin-left:10px;">Run</button>
+</form>
+
+<hr />
+
+<h4>Summary (@Model.From.ToString("yyyy-MM-dd") to @Model.To.ToString("yyyy-MM-dd"))</h4>
+
+<table class="table">
+    <tr>
+        <th>Gross Sales (Completed)</th>
+        <td class="text-end">@Model.GrossSalesAmount.ToString("N2")</td>
+    </tr>
+    <tr>
+        <th>Refunds (Refunded)</th>
+      
+        <td class="text-end">@Model.RefundAmount.ToString("N2")</td>
+    </tr>
+    <tr>
+        <th>Net Sales</th>
+        <td class="text-end">@Model.NetSalesAmount.ToString("N2")</td>
+    </tr>
+
+    <tr>
+        <th>Sales COGS</th>
+        <td class="text-end">@Model.SalesCOGS.ToString("N2")</td>
+    </tr>
+    <tr>
+        <th>Refund COGS</th>
+
+        <td class="text-end">@Model.RefundCOGS.ToString("N2")</td>
+    </tr>
+    <tr>
+        <th>Net COGS</th>
+        <td class="text-end">@Model.NetCOGS.ToString("N2")</td>
+    </tr>
+
+    <tr>
+        <th>Gross Profit</th>
+        <td class="text-end">@Model.GrossProfit.ToString("N2")</td>
+    </tr>
+    <tr>
+        <th>Expenses (Option B)</th>
+        <td class="text-end">- @Model.TotalExpenses.ToString("N2")</td>
+    </tr>
+    <tr>
+        <th><b>Net Profit</b></th>
+        <td class="text-end"><b>@Model.NetProfit.ToString("N2")</b></td>
+    </tr>
+</table>
+
+<h4>Expenses Breakdown</h4>
+
+@if (Model.ExpensesByType == null || Model.ExpensesByType.Count == 0)
+{
+    <p>No expenses in this date range.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th class="text-end">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.ExpensesByType)
+            {
+                <tr>
+                    <td>@row.Type</td>
+                    <td class="text-end">@row.Amount.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
