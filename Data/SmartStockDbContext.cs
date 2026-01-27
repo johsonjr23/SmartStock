@@ -30,6 +30,7 @@ public partial class SmartStockDbContext : DbContext
     public virtual DbSet<Tenant> Tenants { get; set; }
     public virtual DbSet<Unit> Units { get; set; }
     public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
+    public DbSet<Expense> Expenses { get; set; }
 
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -233,6 +234,13 @@ public partial class SmartStockDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.SaleId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<Expense>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
+            entity.HasIndex(e => new { e.TenantId, e.ExpenseDate });
         });
 
 

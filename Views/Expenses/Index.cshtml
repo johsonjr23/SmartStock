@@ -1,0 +1,40 @@
+﻿@model List<SmartStock.Models.Expense>
+
+<h2>Expenses</h2>
+
+<p>
+    <a class="btn btn-primary" asp-action="New">New Expense</a>
+</p>
+
+<form method="get" class="mb-3">
+    <input type="date" name="from" />
+    <input type="date" name="to" />
+    <input type="text" name="q" placeholder="Search type/payee/notes" />
+    <button type="submit" class="btn btn-secondary">Filter</button>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Payee</th>
+            <th class="text-end">Amount</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var e in Model)
+        {
+            <tr>
+                <td>@e.ExpenseDate.ToString("yyyy-MM-dd")</td>
+                <td>@e.Type</td>
+                <td>@(e.Payee ?? "-")</td>
+                <td class="text-end">@e.Amount.ToString("N2")</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@e.Id">View</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

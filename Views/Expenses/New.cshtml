@@ -1,0 +1,44 @@
+﻿@model SmartStock.ViewModels.CreateExpenseViewModel
+
+<h2>New Expense</h2>
+
+<form asp-action="New" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label class="form-label">Type</label>
+        <input asp-for="Type" class="form-control" placeholder="Rent, Transport, Internet..." />
+        <span asp-validation-for="Type" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Amount</label>
+        <input asp-for="Amount" class="form-control" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Payee (optional)</label>
+        <input asp-for="Payee" class="form-control" />
+        <span asp-validation-for="Payee" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Expense Date</label>
+        <input asp-for="ExpenseDate" type="date" class="form-control" />
+        <span asp-validation-for="ExpenseDate" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Notes (optional)</label>
+        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Notes" class="text-danger"></span>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Save Expense</button>
+    <a class="btn btn-light" asp-action="Index">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

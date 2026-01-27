@@ -1,0 +1,14 @@
+﻿@model SmartStock.Models.Expense
+
+<h2>Expense Details</h2>
+
+<table class="table">
+    <tr><th>Date</th><td>@Model.ExpenseDate.ToString("yyyy-MM-dd")</td></tr>
+    <tr><th>Type</th><td>@Model.Type</td></tr>
+    <tr><th>Payee</th><td>@(Model.Payee ?? "-")</td></tr>
+    <tr><th>Amount</th><td>@Model.Amount.ToString("N2")</td></tr>
+    <tr><th>Notes</th><td>@(Model.Notes ?? "-")</td></tr>
+    <tr><th>Created At</th><td>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td></tr>
+</table>
+
+<a class="btn btn-light" asp-action="Index">Back</a>
