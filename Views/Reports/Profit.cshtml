@@ -1,75 +1,107 @@
 ﻿@model SmartStock.ViewModels.ProfitReportViewModel
+@using System
 
-<h2>Profit Report</h2>
+@{
+    var isSw = string.Equals(Model.Lang, "sw", StringComparison.OrdinalIgnoreCase);
+}
 
-<form method="get" class="mb-3">
-    <label>From</label>
+<div class="d-flex justify-content-between align-items-center">
+    <h2 class="mb-0">@Model.Labels.ReportTitle</h2>
+
+    <div>
+        <a asp-action="Profit"
+           asp-route-from="@Model.From.ToString("yyyy-MM-dd")"
+           asp-route-to="@Model.To.ToString("yyyy-MM-dd")"
+           asp-route-lang="en"
+           class="@(isSw ? "" : "fw-bold")">
+            English
+        </a>
+        <span> | </span>
+        <a asp-action="Profit"
+           asp-route-from="@Model.From.ToString("yyyy-MM-dd")"
+           asp-route-to="@Model.To.ToString("yyyy-MM-dd")"
+           asp-route-lang="sw"
+           class="@(isSw ? "fw-bold" : "")">
+            Kiswahili
+        </a>
+    </div>
+</div>
+
+<form method="get" class="mb-3 mt-3">
+    <input type="hidden" name="lang" value="@Model.Lang" />
+
+    <label>@Model.Labels.FromDate</label>
     <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
-    <label style="margin-left:10px;">To</label>
+
+    <label style="margin-left:10px;">@Model.Labels.ToDate</label>
     <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
-    <button type="submit" class="btn btn-secondary" style="margin-left:10px;">Run</button>
+
+    <button type="submit" class="btn btn-secondary" style="margin-left:10px;">
+        @Model.Labels.Generate
+    </button>
 </form>
 
 <hr />
 
-<h4>Summary (@Model.From.ToString("yyyy-MM-dd") to @Model.To.ToString("yyyy-MM-dd"))</h4>
+<h4>
+    @(isSw ? "Muhtasari" : "Summary")
+    (@Model.From.ToString("yyyy-MM-dd") to @Model.To.ToString("yyyy-MM-dd"))
+</h4>
 
 <table class="table">
     <tr>
-        <th>Total Sales</th>
+        <th>@Model.Labels.GrossSales</th>
         <td class="text-end">@Model.GrossSalesAmount.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Refunded Amount</th>
-      
+        <th>@Model.Labels.Refunds</th>
         <td class="text-end">@Model.RefundAmount.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Sales After Refunds</th>
+        <th>@Model.Labels.NetSales</th>
         <td class="text-end">@Model.NetSalesAmount.ToString("N2")</td>
     </tr>
 
     <tr>
-        <th>Cost of Sold Products</th>
+        <th>@(isSw ? "Gharama ya Bidhaa Zilizouzwa" : "Cost of Sold Products")</th>
         <td class="text-end">@Model.SalesCOGS.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Cost of Returned Products</th>
-
+        <th>@(isSw ? "Gharama ya Bidhaa Zilizorejeshwa" : "Cost of Returned Products")</th>
         <td class="text-end">@Model.RefundCOGS.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Total Product Cost</th>
+        <th>@(isSw ? "Jumla ya Gharama za Bidhaa" : "Total Product Cost")</th>
         <td class="text-end">@Model.NetCOGS.ToString("N2")</td>
     </tr>
 
     <tr>
-        <th>Profit Before Expenses</th>
+        <th>@Model.Labels.GrossProfit</th>
         <td class="text-end">@Model.GrossProfit.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Business Expenses</th>
+        <th>@Model.Labels.TotalExpenses</th>
         <td class="text-end">- @Model.TotalExpenses.ToString("N2")</td>
     </tr>
     <tr>
-        <th><b>Final Profit</b></th>
+        <th><b>@Model.Labels.NetProfit</b></th>
         <td class="text-end"><b>@Model.NetProfit.ToString("N2")</b></td>
     </tr>
 </table>
 
-<h4>Expenses Breakdown</h4>
+<h4>@(isSw ? "Mgawanyo wa Gharama" : "Expenses Breakdown")</h4>
 
 @if (Model.ExpensesByType == null || Model.ExpensesByType.Count == 0)
 {
-    <p>No expenses in this date range.</p>
+    <p>@Model.Labels.NoData</p>
 }
 else
 {
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Type</th>
-                <th class="text-end">Amount</th>
+                <th>@Model.Labels.ExpenseType</th>
+                <th class="text-end">@Model.Labels.Amount</th>
             </tr>
         </thead>
         <tbody>

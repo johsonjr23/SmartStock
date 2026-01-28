@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using SmartStock.ReportsLocalization;
 
 namespace SmartStock.ViewModels
 {
@@ -8,16 +9,16 @@ namespace SmartStock.ViewModels
         public DateTime From { get; set; }
         public DateTime To { get; set; }
 
-        // Expenses
+        public string Lang { get; set; } = "en";
+        public ReportLabels Labels { get; set; } = new();
+
         public decimal TotalExpenses { get; set; }
         public List<ExpenseByTypeRow> ExpensesByType { get; set; } = new();
 
-        // Sales / Refunds (Revenue)
         public decimal GrossSalesAmount { get; set; }
         public decimal RefundAmount { get; set; }
         public decimal NetSalesAmount { get; set; }
 
-        // COGS & Profit
         public decimal SalesCOGS { get; set; }
         public decimal RefundCOGS { get; set; }
         public decimal NetCOGS { get; set; }

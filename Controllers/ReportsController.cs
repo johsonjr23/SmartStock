@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartStock.Data;
 using SmartStock.Models;
 using SmartStock.ViewModels;
+using SmartStock.ReportsLocalization;
 
 namespace SmartStock.Controllers
 {
@@ -21,7 +22,7 @@ namespace SmartStock.Controllers
 
         // GET: /Reports/Profit
         [HttpGet]
-        public async Task<IActionResult> Profit(DateTime? from = null, DateTime? to = null)
+        public async Task<IActionResult> Profit(DateTime? from = null, DateTime? to = null, string? lang = "en")
         {
             var tenantId = GetTenantId();
 
@@ -124,6 +125,9 @@ namespace SmartStock.Controllers
             {
                 From = start,
                 To = end,
+
+                Lang = (lang ?? "en").ToLower(),
+                Labels = ReportLabelProvider.Get(lang),
 
                 TotalExpenses = totalExpenses,
                 ExpensesByType = expensesByType,
