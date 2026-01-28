@@ -16,43 +16,43 @@
 
 <table class="table">
     <tr>
-        <th>Gross Sales (Completed)</th>
+        <th>Total Sales</th>
         <td class="text-end">@Model.GrossSalesAmount.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Refunds (Refunded)</th>
+        <th>Refunded Amount</th>
       
         <td class="text-end">@Model.RefundAmount.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Net Sales</th>
+        <th>Sales After Refunds</th>
         <td class="text-end">@Model.NetSalesAmount.ToString("N2")</td>
     </tr>
 
     <tr>
-        <th>Sales COGS</th>
+        <th>Cost of Sold Products</th>
         <td class="text-end">@Model.SalesCOGS.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Refund COGS</th>
+        <th>Cost of Returned Products</th>
 
         <td class="text-end">@Model.RefundCOGS.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Net COGS</th>
+        <th>Total Product Cost</th>
         <td class="text-end">@Model.NetCOGS.ToString("N2")</td>
     </tr>
 
     <tr>
-        <th>Gross Profit</th>
+        <th>Profit Before Expenses</th>
         <td class="text-end">@Model.GrossProfit.ToString("N2")</td>
     </tr>
     <tr>
-        <th>Expenses (Option B)</th>
+        <th>Business Expenses</th>
         <td class="text-end">- @Model.TotalExpenses.ToString("N2")</td>
     </tr>
     <tr>
-        <th><b>Net Profit</b></th>
+        <th><b>Final Profit</b></th>
         <td class="text-end"><b>@Model.NetProfit.ToString("N2")</b></td>
     </tr>
 </table>
