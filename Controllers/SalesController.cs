@@ -149,8 +149,6 @@ namespace SmartStock.Controllers
                         TotalAmount = 0m,
                         Status = SaleStatus.Completed,
                         CompletedAt = DateTime.UtcNow
-                        // NOTE: Your current Sale entity does not have SaleDate/PaymentType.
-                        // We will not set them here.
                     };
 
                     _context.Sales.Add(sale);
@@ -160,6 +158,9 @@ namespace SmartStock.Controllers
 
                     foreach (var item in model.Items.OrderBy(i => i.ProductId))
                     {
+                        if (item.Quantity <= 0)
+                            throw new Exception("Quantity must be at least 1.");
+
                         await LockProductRowAsync(tenantId, item.ProductId);
 
                         var product = await _context.Products
@@ -184,6 +185,10 @@ namespace SmartStock.Controllers
                             ProductId = product.Id,
                             Quantity = item.Quantity,
                             SellingPrice = unitPrice,
+
+                            // ✅ Phase 2 snapshot
+                            BuyingPriceAtSale = product.BuyingPrice,
+
                             SubTotal = lineTotal
                         });
 
@@ -205,7 +210,6 @@ namespace SmartStock.Controllers
                     await tx.CommitAsync();
                     TempData["Success"] = "Sale completed successfully";
 
-                    // STEP 4: redirect to receipt/details
                     return RedirectToAction("Details", new { id = sale.Id });
                 }
                 catch (Exception ex)
@@ -249,11 +253,10 @@ namespace SmartStock.Controllers
                     ? sale.InvoiceNumber!
                     : $"SALE-{sale.Id:D6}",
 
-                SaleDate = sale.CreatedAt,   // fallback date
-                PaymentType = "N/A",         // until you add/store payment type in Sale
+                SaleDate = sale.CreatedAt,
+                PaymentType = "N/A",
                 TotalAmount = sale.TotalAmount,
 
-                // Step 5.2 status info
                 Status = sale.Status.ToString(),
                 VoidedAt = sale.VoidedAt,
                 VoidReason = sale.VoidReason,
@@ -312,7 +315,6 @@ namespace SmartStock.Controllers
                 sale.VoidedAt = DateTime.UtcNow;
                 sale.VoidReason = reason.Trim();
 
-                // Reverse inventory for each sale item
                 foreach (var item in sale.SaleItems)
                 {
                     await LockProductRowAsync(tenantId, item.ProductId);
@@ -322,7 +324,7 @@ namespace SmartStock.Controllers
                         TenantId = tenantId,
                         ProductId = item.ProductId,
                         SaleId = sale.Id,
-                        QuantityChange = item.Quantity, // reversal (positive)
+                        QuantityChange = item.Quantity,
                         TransactionType = InventoryTransactionType.Void
                     });
                 }
@@ -341,7 +343,10 @@ namespace SmartStock.Controllers
             }
         }
 
-
+        // =========================
+        // STEP 5.3: FULL REFUND
+        // POST: /Sales/RefundFull/{id}
+        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RefundFull(int id, string reason)
@@ -358,7 +363,6 @@ namespace SmartStock.Controllers
 
             try
             {
-                // Load original sale + items (tenant-scoped)
                 var original = await _context.Sales
                     .Where(s => s.TenantId == tenantId && s.Id == id)
                     .Include(s => s.SaleItems)
@@ -385,34 +389,39 @@ namespace SmartStock.Controllers
                     return RedirectToAction("Details", new { id });
                 }
 
-                // Create refund sale record
                 var refundSale = new Sale
                 {
                     TenantId = tenantId,
-                    TotalAmount = 0m, // set below
+                    TotalAmount = 0m,
                     Status = SaleStatus.Refunded,
                     CompletedAt = DateTime.UtcNow,
 
                     OriginalSaleId = original.Id,
                     RefundedAt = DateTime.UtcNow,
                     RefundReason = reason.Trim()
-
-                    // RefundedBy can be set later when you expose your user id in BaseController
                 };
 
                 _context.Sales.Add(refundSale);
-                await _context.SaveChangesAsync(); // get refundSale.Id
+                await _context.SaveChangesAsync();
 
                 decimal refundTotal = 0m;
 
-                // For full refund: mirror all items
                 foreach (var item in original.SaleItems.OrderBy(i => i.ProductId))
                 {
                     await LockProductRowAsync(tenantId, item.ProductId);
 
-                    // Create negative sale item (keeps quantities positive; price negative)
+                    // Fallback safety for old historical rows (pre Phase 2)
+                    var product = await _context.Products
+                        .Where(p => p.TenantId == tenantId && p.IsActive)
+                        .FirstOrDefaultAsync(p => p.Id == item.ProductId);
+
+                    if (product == null)
+                        throw new Exception("Product not found or inactive");
+
                     var negativePrice = -item.SellingPrice;
                     var lineTotal = negativePrice * item.Quantity;
+
+                    var costSnapshot = item.BuyingPriceAtSale ?? product.BuyingPrice;
 
                     _context.SaleItems.Add(new SaleItem
                     {
@@ -421,10 +430,13 @@ namespace SmartStock.Controllers
                         ProductId = item.ProductId,
                         Quantity = item.Quantity,
                         SellingPrice = negativePrice,
+
+                        // ✅ Phase 2 snapshot carried into refund
+                        BuyingPriceAtSale = costSnapshot,
+
                         SubTotal = lineTotal
                     });
 
-                    // Inventory comes back (positive quantity change)
                     _context.InventoryTransactions.Add(new InventoryTransaction
                     {
                         TenantId = tenantId,
@@ -434,12 +446,11 @@ namespace SmartStock.Controllers
                         TransactionType = InventoryTransactionType.Refund
                     });
 
-                    refundTotal += lineTotal; // negative
+                    refundTotal += lineTotal;
                 }
 
                 refundSale.TotalAmount = refundTotal;
 
-                // Mark original as refunded to prevent duplicates
                 original.Status = SaleStatus.Refunded;
                 original.RefundedAt = refundSale.RefundedAt;
                 original.RefundReason = refundSale.RefundReason;
@@ -448,7 +459,7 @@ namespace SmartStock.Controllers
                 await tx.CommitAsync();
 
                 TempData["Success"] = "Full refund completed successfully.";
-                return RedirectToAction("Details", new { id = refundSale.Id }); // show refund receipt
+                return RedirectToAction("Details", new { id = refundSale.Id });
             }
             catch (Exception ex)
             {
@@ -457,9 +468,6 @@ namespace SmartStock.Controllers
                 return RedirectToAction("Details", new { id });
             }
         }
-
-
-
 
         // =========================
         // AUTOCOMPLETE ENDPOINT

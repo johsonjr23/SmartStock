@@ -21,6 +21,10 @@ namespace SmartStock.Models
         // Price per unit at time of sale
         public decimal SellingPrice { get; set; }
 
+        // ✅ Phase 2: freeze cost at the time of sale
+        // Nullable to avoid breaking existing historical rows after migration.
+        // New sales MUST populate this.
+        public decimal? BuyingPriceAtSale { get; set; }
 
         // Quantity * UnitPrice
         public decimal SubTotal { get; set; }

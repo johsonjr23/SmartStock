@@ -151,21 +151,18 @@ public partial class SmartStockDbContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
             entity.Property(e => e.SellingPrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.BuyingPriceAtSale).HasColumnType("decimal(18,2)");
+
 
             entity.Property(e => e.SubTotal)
                 .HasComputedColumnSql("([Quantity]*[SellingPrice])", false)
                 .HasColumnType("decimal(29, 2)");
 
-            // Keep: Sale -> SaleItems cascade (owned children)
-            entity.HasOne(d => d.Sale).WithMany(p => p.SaleItems)
-                .HasForeignKey(d => d.SaleId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // CRITICAL FIX: Product -> SaleItems must NOT cascade (prevents multiple cascade paths)
-            entity.HasOne(d => d.Product).WithMany(p => p.SaleItems)
-                .HasForeignKey(d => d.ProductId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // ...
         });
+
+
+
 
         modelBuilder.Entity<StockHistory>(entity =>
         {

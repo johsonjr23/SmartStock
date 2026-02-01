@@ -91,6 +91,7 @@ namespace SmartStock.Controllers
 
             // =========================
             // COGS – ORIGINAL SALES
+            // Phase 2: use BuyingPriceAtSale snapshot; fallback to Product.BuyingPrice for old rows
             // =========================
             var salesCOGS = await _context.SaleItems
                 .AsNoTracking()
@@ -99,10 +100,11 @@ namespace SmartStock.Controllers
                 .Where(si => si.Sale.Status != SaleStatus.Voided)
                 .Where(si => si.Sale.CompletedAt != null)
                 .Where(si => si.Sale.CompletedAt >= start && si.Sale.CompletedAt < endExclusive)
-                .SumAsync(si => (decimal?)si.Quantity * si.Product.BuyingPrice) ?? 0m;
+                .SumAsync(si => (decimal?)si.Quantity * (si.BuyingPriceAtSale ?? si.Product.BuyingPrice)) ?? 0m;
 
             // =========================
             // COGS – REFUND TRANSACTIONS
+            // Phase 2: use BuyingPriceAtSale snapshot; fallback to Product.BuyingPrice for old rows
             // =========================
             var refundCOGS = await _context.SaleItems
                 .AsNoTracking()
@@ -111,7 +113,7 @@ namespace SmartStock.Controllers
                 .Where(si => si.Sale.Status == SaleStatus.Refunded)
                 .Where(si => si.Sale.RefundedAt != null)
                 .Where(si => si.Sale.RefundedAt >= start && si.Sale.RefundedAt < endExclusive)
-                .SumAsync(si => (decimal?)si.Quantity * si.Product.BuyingPrice) ?? 0m;
+                .SumAsync(si => (decimal?)si.Quantity * (si.BuyingPriceAtSale ?? si.Product.BuyingPrice)) ?? 0m;
 
             var netCOGS = salesCOGS - refundCOGS;
 
