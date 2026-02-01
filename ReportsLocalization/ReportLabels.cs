@@ -17,6 +17,22 @@
 
         public string ExpenseType { get; set; } = "";
         public string Amount { get; set; } = "";
+     
         public string NoData { get; set; } = "";
+
+        public string? InventoryValuation_Title { get; set; }
+        public string? InventoryValuation_Subtitle { get; set; }
+        public string? InventoryValuation_IncludeZero { get; set; }
+        public string? InventoryValuation_AvgCost { get; set; }
+        public string? InventoryValuation_StockValue { get; set; }
+        public string? InventoryValuation_TotalUnits { get; set; }
+        public string? InventoryValuation_TotalValue { get; set; }
+
+        public string? Common_NoItems { get; set; }
+        public string? Common_All { get; set; }
+        public string? Common_GeneratedAt { get; set; }
+
+
+
     }
 }
