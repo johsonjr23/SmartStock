@@ -90,59 +90,36 @@ namespace SmartStock.Controllers
                 products = products.Where(p => p.Name.Contains(term) || (p.SKU != null && p.SKU.Contains(term)));
             }
 
-            // STOCK (because Product has no StockQuantity)
-            // CurrentStock = Purchases - Sold + Refunded
 
-            var purchaseAgg = _context.PurchaseItems
-                .AsNoTracking()
-                .Where(pi => pi.TenantId == tenantId)
-                .GroupBy(pi => pi.ProductId)
-                .Select(g => new { ProductId = g.Key, Qty = g.Sum(x => x.Quantity) });
 
-            var soldAgg = _context.SaleItems
-                .AsNoTracking()
-                .Where(si => si.TenantId == tenantId)
-                .Where(si => si.Sale.OriginalSaleId == null)       // original sales
-                .Where(si => si.Sale.Status != SaleStatus.Voided) // exclude void
-                .Where(si => si.Sale.CompletedAt != null)
-                .GroupBy(si => si.ProductId)
-                .Select(g => new { ProductId = g.Key, Qty = g.Sum(x => x.Quantity) });
+            // =========================
+            // STOCK – LEDGER BASED (InventoryTransactions)
+            // =========================
 
-            var refundAgg = _context.SaleItems
+            var stockAgg = _context.InventoryTransactions
                 .AsNoTracking()
-                .Where(si => si.TenantId == tenantId)
-                .Where(si => si.Sale.OriginalSaleId != null)      // refund rows
-                .Where(si => si.Sale.Status == SaleStatus.Refunded)
-                .Where(si => si.Sale.RefundedAt != null)
-                .GroupBy(si => si.ProductId)
-                .Select(g => new { ProductId = g.Key, Qty = g.Sum(x => x.Quantity) });
+                .Where(t => t.TenantId == tenantId)
+                .GroupBy(t => t.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    Qty = g.Sum(x => x.QuantityChange)
+                });
 
             var rowsQuery =
                 from p in products
 
-                join pu in purchaseAgg on p.Id equals pu.ProductId into puj
-                from pu in puj.DefaultIfEmpty()
+                join st in stockAgg on p.Id equals st.ProductId into stj
+                from st in stj.DefaultIfEmpty()
 
-                join so in soldAgg on p.Id equals so.ProductId into soj
-                from so in soj.DefaultIfEmpty()
-
-                join rf in refundAgg on p.Id equals rf.ProductId into rfj
-                from rf in rfj.DefaultIfEmpty()
-
-                let purchased = (decimal?)pu.Qty ?? 0m
-                let sold = (decimal?)so.Qty ?? 0m
-                let refunded = (decimal?)rf.Qty ?? 0m
-                let stockQty = purchased - sold + refunded
+                let stockQty = (decimal?)st.Qty ?? 0m
 
                 select new InventoryValuationRowVm
                 {
                     ProductId = p.Id,
                     SKU = p.SKU,
                     Name = p.Name,
-                    //Category = p.Category != null ? p.Category.Name : "",
-                    //Category = p.Category == null ? "" : p.Category.Name,
                     Category = p.Category!.Name,
-
 
                     StockQty = stockQty,
                     AvgCost = p.BuyingPrice,
