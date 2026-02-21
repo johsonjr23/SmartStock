@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Build.Tasks.Deployment.Bootstrapper;
 using Microsoft.EntityFrameworkCore;
 using SmartStock.Data;
 using SmartStock.Models;
 using SmartStock.ViewModels;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SmartStock.Controllers
 {
@@ -324,8 +325,9 @@ namespace SmartStock.Controllers
                         TenantId = tenantId,
                         ProductId = item.ProductId,
                         SaleId = sale.Id,
-                        QuantityChange = item.Quantity,
-                        TransactionType = InventoryTransactionType.Void
+                        QuantityChange = -item.Quantity,
+                        TransactionType = InventoryTransactionType.Sale,
+                        CreatedAt = DateTime.UtcNow
                     });
                 }
 

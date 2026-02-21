@@ -84,7 +84,7 @@ namespace SmartStock.Controllers
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Product product)
+        public async Task<IActionResult> Create(Product product, int? openingStock)
         {
             var tenantId = GetTenantId();
 
@@ -100,13 +100,39 @@ namespace SmartStock.Controllers
             product.TenantId = tenantId;
             product.CreatedAt = DateTime.UtcNow;
 
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            using var dbTransaction = await _context.Database.BeginTransactionAsync();
 
-            // UX FLOW: product → stock in
-           // return RedirectToAction(nameof(StockIn), new { productId = product.Id });
-            return RedirectToAction("StockIn", new { id = product.Id });
+            try
+            {
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
 
+                // OPENING STOCK LOGIC
+                if (openingStock.HasValue && openingStock.Value > 0)
+                {
+                    var inventoryTransaction = new InventoryTransaction
+                    {
+                        ProductId = product.Id,
+                        TenantId = tenantId,
+                        QuantityChange = openingStock.Value,
+                        TransactionType = InventoryTransactionType.Opening,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.InventoryTransactions.Add(inventoryTransaction);
+                    await _context.SaveChangesAsync();
+                }
+
+                await dbTransaction.CommitAsync();
+            }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                throw;
+            }
+
+            return RedirectToAction(nameof(Index));
+        
         }
 
         // =========================

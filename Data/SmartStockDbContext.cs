@@ -32,6 +32,8 @@ public partial class SmartStockDbContext : DbContext
     public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
     public DbSet<Expense> Expenses { get; set; }
 
+    public DbSet<StockTransaction> StockTransactions { get; set; }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code.

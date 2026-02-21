@@ -84,6 +84,12 @@
             <span asp-validation-for="UnitId" class="text-danger"></span>
         </div>
 
+
+        <div class="form-group">
+            <label>Opening Stock (Optional)</label>
+            <input type="number" name="openingStock" class="form-control" min="0" />
+        </div>
+
         <!-- Reorder Level -->
         <div class="form-group col-md-2">
             <label asp-for="ReorderLevel"></label>
