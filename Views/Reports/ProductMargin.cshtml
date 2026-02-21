@@ -1,0 +1,41 @@
+﻿
+@model SmartStock.ViewModels.ProductMarginReportViewModel
+<h2>Product Margin Report</h2>
+
+<form method="get">
+    <label>From:</label>
+    <input type="date" name="fromDate"
+           value="@Model.FromDate?.ToString("yyyy-MM-dd")" />
+
+    <label>To:</label>
+    <input type="date" name="toDate"
+           value="@Model.ToDate?.ToString("yyyy-MM-dd")" />
+
+    <button type="submit">Filter</button>
+</form>
+
+<table class="table table-bordered mt-3">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Qty Sold</th>
+            <th>Revenue</th>
+            <th>Cost</th>
+            <th>Profit</th>
+            <th>Margin %</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@item.ProductName</td>
+                <td>@item.TotalQuantity</td>
+                <td>@item.Revenue.ToString("N2")</td>
+                <td>@item.Cost.ToString("N2")</td>
+                <td>@item.Profit.ToString("N2")</td>
+                <td>@item.MarginPercentage.ToString("N2")%</td>
+            </tr>
+        }
+    </tbody>
+</table>

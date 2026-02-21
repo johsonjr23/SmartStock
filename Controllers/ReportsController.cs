@@ -269,5 +269,56 @@ namespace SmartStock.Controllers
 
             return View(vm);
         }
+        public async Task<IActionResult> ProductMargin(DateTime? fromDate, DateTime? toDate)
+        {
+            var tenantId = GetTenantId();
+
+            // Default date range (optional but recommended)
+            var from = fromDate ?? DateTime.UtcNow.Date.AddDays(-30);
+            var to = toDate ?? DateTime.UtcNow;
+
+            var query = await _context.SaleItems
+    .Where(si =>
+        si.Sale.TenantId == tenantId &&
+        si.Sale.Status == SaleStatus.Completed &&
+        si.Sale.CompletedAt >= from &&
+        si.Sale.CompletedAt <= to)
+    .GroupBy(si => new { si.ProductId, si.Product.Name })
+    .Select(g => new ProductMarginRowViewModel
+    {
+        ProductName = g.Key.Name,
+
+        TotalQuantity = g.Sum(x => x.Quantity),
+
+        Revenue = g.Sum(x =>
+            x.Quantity * x.SellingPrice),
+
+        Cost = g.Sum(x =>
+            x.Quantity * x.BuyingPriceAtSale.GetValueOrDefault()),
+
+        Profit = g.Sum(x =>
+            (x.Quantity * x.SellingPrice) -
+            (x.Quantity * x.BuyingPriceAtSale.GetValueOrDefault()))
+    })
+    .OrderByDescending(x => x.Profit)
+    .ToListAsync();
+            // Calculate margin percentage after materialization
+            foreach (var item in query)
+            {
+                item.MarginPercentage = item.Revenue == 0
+                    ? 0
+                    : (item.Profit / item.Revenue) * 100;
+            }
+
+            var viewModel = new ProductMarginReportViewModel
+            {
+                FromDate = from,
+                ToDate = to,
+                Items = query
+            };
+
+            return View(viewModel);
+        }
+
     }
 }
