@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Build.Tasks.Deployment.Bootstrapper;
@@ -13,6 +14,7 @@ using System.Threading.Tasks;
 
 namespace SmartStock.Controllers
 {
+    [Authorize(Roles = "TenantAdmin,Manager,Cashier")]
     public class SalesController : BaseController
     {
         private readonly SmartStockDbContext _context;

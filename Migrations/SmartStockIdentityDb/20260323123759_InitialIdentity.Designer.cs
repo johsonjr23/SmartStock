@@ -12,8 +12,8 @@ using SmartStock.Data;
 namespace SmartStock.Migrations.SmartStockIdentityDb
 {
     [DbContext(typeof(SmartStockIdentityDbContext))]
-    [Migration("20260120130325_Initial_Identity")]
-    partial class Initial_Identity
+    [Migration("20260323123759_InitialIdentity")]
+    partial class InitialIdentity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -177,6 +177,9 @@ namespace SmartStock.Migrations.SmartStockIdentityDb
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("FullName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -203,7 +206,7 @@ namespace SmartStock.Migrations.SmartStockIdentityDb
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("TenantId")
+                    b.Property<int?>("TenantId")
                         .HasColumnType("int");
 
                     b.Property<bool>("TwoFactorEnabled")

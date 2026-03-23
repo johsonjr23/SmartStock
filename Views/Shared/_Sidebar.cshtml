@@ -1,0 +1,152 @@
+@using Microsoft.AspNetCore.Identity
+@using SmartStock.Data
+@using SmartStock.Models
+@inject UserManager<ApplicationUser> _sbUM
+@inject SmartStockDbContext _sbDb
+
+@{
+    @* ── Resolve current user & tenant ──────────────────────────── *@
+    var sbUserId  = _sbUM.GetUserId(User);
+    var sbUser    = sbUserId != null ? await _sbUM.FindByIdAsync(sbUserId) : null;
+
+    var tenantName = "SmartStock";
+    if (sbUser?.TenantId != null)
+    {
+        var t = await _sbDb.Tenants.FindAsync(sbUser.TenantId);
+        tenantName = t?.Name ?? "SmartStock";
+    }
+
+    var fullName = sbUser?.FullName ?? sbUser?.Email ?? "User";
+    var sbRoles  = sbUser != null ? await _sbUM.GetRolesAsync(sbUser) : new List<string>();
+    var role     = sbRoles.FirstOrDefault() ?? "";
+
+    @* Initials — up to 2 characters *@
+    var parts    = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    var initials = parts.Length >= 2
+        ? $"{parts[0][0]}{parts[1][0]}"
+        : fullName.Length > 0 ? $"{fullName[0]}" : "?";
+
+    var roleLabel = role switch {
+        "TenantAdmin" => "Administrator",
+        "Manager"     => "Manager",
+        "Cashier"     => "Cashier",
+        _             => role
+    };
+
+    @* ── Active-link helper ──────────────────────────────────────── *@
+    var ctrl   = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var action = ViewContext.RouteData.Values["action"]?.ToString()     ?? "";
+
+    string Active(string c) =>
+        ctrl.Equals(c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+
+<aside id="sidebar">
+
+    @* ① Brand header *@
+    <div class="sb-head">
+        <div class="sb-logo-mark">S</div>
+        <span class="sb-brand-name">SmartStock</span>
+        <button id="sb-collapse-btn" class="sb-toggle-btn"
+                title="Collapse sidebar" aria-label="Toggle sidebar">
+            <i class="bi bi-chevron-left sb-chevron"></i>
+        </button>
+    </div>
+
+    @* ② Business / tenant name *@
+    <div class="sb-tenant">
+        <span class="sb-tenant-label">Business</span>
+        <span class="sb-tenant-name" title="@tenantName">@tenantName</span>
+    </div>
+
+    @* ③ Navigation *@
+    <nav class="sb-nav" aria-label="Main navigation">
+
+        <div class="sb-section-label">Menu</div>
+
+        @* Dashboard — all roles *@
+        <a class="sb-link @Active("Home")"
+           asp-controller="Home" asp-action="Index"
+           data-label="Dashboard">
+            <i class="bi bi-speedometer2 sb-icon"></i>
+            <span class="sb-label">Dashboard</span>
+        </a>
+
+        @* Sales — TenantAdmin | Manager | Cashier *@
+        @if (User.IsInRole("TenantAdmin") || User.IsInRole("Manager") || User.IsInRole("Cashier"))
+        {
+            <a class="sb-link @(ctrl == "Sales" && action != "New" ? "active" : "")"
+               asp-controller="Sales" asp-action="Index"
+               data-label="Sales">
+                <i class="bi bi-receipt sb-icon"></i>
+                <span class="sb-label">Sales</span>
+            </a>
+            <a class="sb-link @(ctrl == "Sales" && action == "New" ? "active" : "")"
+               asp-controller="Sales" asp-action="New"
+               data-label="New Sale">
+                <i class="bi bi-plus-circle sb-icon"></i>
+                <span class="sb-label">New Sale</span>
+            </a>
+        }
+
+        @* Products & Expenses — TenantAdmin | Manager *@
+        @if (User.IsInRole("TenantAdmin") || User.IsInRole("Manager"))
+        {
+            <a class="sb-link @Active("Products")"
+               asp-controller="Products" asp-action="Index"
+               data-label="Products">
+                <i class="bi bi-box-seam sb-icon"></i>
+                <span class="sb-label">Products</span>
+            </a>
+            <a class="sb-link @Active("Expenses")"
+               asp-controller="Expenses" asp-action="Index"
+               data-label="Expenses">
+                <i class="bi bi-wallet2 sb-icon"></i>
+                <span class="sb-label">Expenses</span>
+            </a>
+        }
+
+        @* Reports, Users, Categories — TenantAdmin only *@
+        @if (User.IsInRole("TenantAdmin"))
+        {
+            <div class="sb-divider"></div>
+            <div class="sb-section-label">Management</div>
+
+            <a class="sb-link @Active("Reports")"
+               asp-controller="Reports" asp-action="Profit"
+               data-label="Reports">
+                <i class="bi bi-bar-chart-line sb-icon"></i>
+                <span class="sb-label">Reports</span>
+            </a>
+            <a class="sb-link @Active("Users")"
+               asp-controller="Users" asp-action="Index"
+               data-label="Users">
+                <i class="bi bi-people sb-icon"></i>
+                <span class="sb-label">Users</span>
+            </a>
+            <a class="sb-link @Active("Categories")"
+               asp-controller="Categories" asp-action="Index"
+               data-label="Categories">
+                <i class="bi bi-tags sb-icon"></i>
+                <span class="sb-label">Categories</span>
+            </a>
+        }
+
+    </nav>
+
+    @* ④ User footer *@
+    <div class="sb-foot">
+        <div class="sb-avatar" title="@fullName">@initials</div>
+        <div class="sb-user-info">
+            <div class="sb-user-name">@fullName</div>
+            <div class="sb-user-role">@roleLabel</div>
+        </div>
+        <form asp-controller="Account" asp-action="Logout" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="sb-logout-btn" title="Sign out">
+                <i class="bi bi-box-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+
+</aside>

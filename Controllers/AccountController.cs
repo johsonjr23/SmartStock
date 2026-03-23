@@ -11,15 +11,18 @@ namespace SmartStock.Controllers
         private readonly SmartStockDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
         public AccountController(
             SmartStockDbContext db,
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager,
+            RoleManager<IdentityRole> roleManager)
         {
             _db = db;
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
         }
 
         // =========================
@@ -59,7 +62,7 @@ namespace SmartStock.Controllers
 
             var result = await _userManager.CreateAsync(user, model.Password);
 
-            // ❗ Rollback tenant if user creation fails
+            // Rollback tenant if user creation fails
             if (!result.Succeeded)
             {
                 _db.Tenants.Remove(tenant);
@@ -71,10 +74,13 @@ namespace SmartStock.Controllers
                 return View(model);
             }
 
-            // 3️⃣ Auto-login after registration
+            // Assign TenantAdmin role
+            await _userManager.AddToRoleAsync(user, "TenantAdmin");
+
+            // Auto-login after registration
             await _signInManager.SignInAsync(user, isPersistent: false);
 
-            return RedirectToAction("Index", "Dashboard");
+            return RedirectToAction("Index", "Home");
         }
 
         // =========================
@@ -97,12 +103,16 @@ namespace SmartStock.Controllers
                 model.Email,
                 model.Password,
                 model.RememberMe,
-                lockoutOnFailure: false
+                lockoutOnFailure: true
             );
 
             if (result.Succeeded)
             {
-                return RedirectToAction("Index", "Dashboard");
+                var loggedInUser = await _userManager.FindByEmailAsync(model.Email);
+                if (loggedInUser != null && await _userManager.IsInRoleAsync(loggedInUser, "SystemAdmin"))
+                    return RedirectToAction("Index", "Tenants", new { area = "SystemAdmin" });
+
+                return RedirectToAction("Index", "Home");
             }
 
             ModelState.AddModelError(string.Empty, "Invalid email or password.");

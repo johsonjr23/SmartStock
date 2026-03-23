@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ using SmartStock.ViewModels.Reports;
 
 namespace SmartStock.Controllers
 {
+    [Authorize(Roles = "TenantAdmin")]
     public class ReportsController : BaseController
     {
         private readonly SmartStockDbContext _context;

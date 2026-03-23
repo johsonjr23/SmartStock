@@ -23,21 +23,17 @@ namespace SmartStock.Controllers
 
             // Extra safety (should not normally happen)
             if (string.IsNullOrEmpty(userId))
-            {
                 throw new UnauthorizedAccessException("User is not authenticated.");
-            }
 
             var tenantId = _userManager.Users
                 .Where(u => u.Id == userId)
                 .Select(u => u.TenantId)
                 .FirstOrDefault();
 
-            if (tenantId == 0)
-            {
-                throw new Exception("Tenant not assigned to user.");
-            }
+            if (tenantId == null)
+                throw new Exception("Tenant not assigned to this user account.");
 
-            return tenantId;
+            return tenantId.Value;
         }
     }
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/Users/JUNIOR/source/repos/SmartStock log --oneline)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet tool:*)"
+    ]
+  }
+}

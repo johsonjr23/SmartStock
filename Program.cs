@@ -20,8 +20,9 @@ builder.Services.AddDbContext<SmartStockIdentityDbContext>(options =>
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>
     {
-        // Optional but recommended defaults
         options.User.RequireUniqueEmail = true;
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     })
     .AddEntityFrameworkStores<SmartStockIdentityDbContext>()
     .AddDefaultTokenProviders();
@@ -38,6 +39,45 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 var app = builder.Build();
+
+// ================= AUTO-MIGRATE ON STARTUP =================
+using (var scope = app.Services.CreateScope())
+{
+    var identityDb = scope.ServiceProvider.GetRequiredService<SmartStockIdentityDbContext>();
+    await identityDb.Database.MigrateAsync();
+}
+
+// ================= SEED ROLES & SYSTEM ADMIN =================
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+    string[] roles = ["SystemAdmin", "TenantAdmin", "Manager", "Cashier"];
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+            await roleManager.CreateAsync(new IdentityRole(role));
+    }
+
+    var adminEmail = app.Configuration["SystemAdmin:Email"] ?? "admin@smartstock.com";
+    var adminPassword = app.Configuration["SystemAdmin:Password"] ?? "Admin@123";
+
+    if (await userManager.FindByEmailAsync(adminEmail) == null)
+    {
+        var admin = new ApplicationUser
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            FullName = "System Administrator",
+            TenantId = null,
+            EmailConfirmed = true
+        };
+        var createResult = await userManager.CreateAsync(admin, adminPassword);
+        if (createResult.Succeeded)
+            await userManager.AddToRoleAsync(admin, "SystemAdmin");
+    }
+}
 
 // ================= PIPELINE =================
 if (!app.Environment.IsDevelopment())

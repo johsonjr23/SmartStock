@@ -1,64 +1,600 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SmartStock</title>
     <script type="importmap"></script>
+
+    @* Bootstrap CSS (local) *@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    @* Bootstrap Icons (CDN) *@
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    @* App global *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/SmartStock.styles.css" asp-append-version="true" />
+
+    <style>
+        /* ================================================================
+           CSS CUSTOM PROPERTIES
+           ================================================================ */
+        :root {
+            --sb-w:           260px;
+            --sb-min:         64px;
+            --sb-bg:          #0d1b2a;
+            --sb-surface:     #162032;
+            --sb-border:      rgba(255, 255, 255, 0.07);
+            --sb-text:        #7a8fa0;
+            --sb-text-dim:    #4a5a6a;
+            --sb-accent:      #10b981;
+            --sb-accent-bg:   rgba(16, 185, 129, 0.11);
+            --sb-accent-glow: rgba(16, 185, 129, 0.25);
+            --page-bg:        #f0f4f8;
+            --topbar-h:       54px;
+            --ease:           0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ================================================================
+           RESET / BASE
+           ================================================================ */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: var(--page-bg);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        /* ================================================================
+           SIDEBAR
+           ================================================================ */
+        #sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            height: 100vh;
+            width: var(--sb-w);
+            background: var(--sb-bg);
+            display: flex;
+            flex-direction: column;
+            transition: width var(--ease);
+            overflow: hidden;
+            z-index: 1040;
+            border-right: 1px solid var(--sb-border);
+            /* Subtle top accent stripe */
+            box-shadow: inset -1px 0 0 rgba(16,185,129,0.08);
+        }
+
+        /* ── Brand header ── */
+        .sb-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 14px;
+            height: 60px;
+            border-bottom: 1px solid var(--sb-border);
+            flex-shrink: 0;
+        }
+
+        .sb-logo-mark {
+            width: 34px;
+            height: 34px;
+            background: var(--sb-accent);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 15px;
+            color: #fff;
+            flex-shrink: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .sb-brand-name {
+            color: #e2e8f0;
+            font-weight: 700;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity var(--ease), width var(--ease);
+            flex: 1;
+        }
+
+        .sb-toggle-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid var(--sb-border);
+            background: none;
+            color: var(--sb-text-dim);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background var(--ease), color var(--ease), border-color var(--ease);
+        }
+
+        .sb-toggle-btn:hover {
+            background: var(--sb-surface);
+            color: #e2e8f0;
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .sb-chevron {
+            font-size: 13px;
+            transition: transform var(--ease);
+        }
+
+        /* ── Tenant name ── */
+        .sb-tenant {
+            padding: 12px 16px 8px;
+            border-bottom: 1px solid var(--sb-border);
+            flex-shrink: 0;
+            overflow: hidden;
+            transition: height var(--ease), padding var(--ease), opacity var(--ease);
+        }
+
+        .sb-tenant-label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--sb-text-dim);
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
+
+        .sb-tenant-name {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Navigation ── */
+        .sb-nav {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 10px 8px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--sb-surface) transparent;
+        }
+
+        .sb-nav::-webkit-scrollbar { width: 4px; }
+        .sb-nav::-webkit-scrollbar-track { background: transparent; }
+        .sb-nav::-webkit-scrollbar-thumb { background: var(--sb-surface); border-radius: 2px; }
+
+        .sb-section-label {
+            font-size: 10px;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--sb-text-dim);
+            padding: 6px 10px 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity var(--ease);
+        }
+
+        .sb-divider {
+            height: 1px;
+            background: var(--sb-border);
+            margin: 8px 0;
+        }
+
+        .sb-link {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 9px 10px;
+            border-radius: 8px;
+            color: var(--sb-text);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            white-space: nowrap;
+            border-left: 3px solid transparent;
+            margin-bottom: 2px;
+            transition: background var(--ease), color var(--ease), border-color var(--ease);
+            position: relative;
+        }
+
+        .sb-link:hover {
+            background: var(--sb-surface);
+            color: #cbd5e1;
+            text-decoration: none;
+        }
+
+        .sb-link.active {
+            background: var(--sb-accent-bg);
+            color: var(--sb-accent);
+            border-left-color: var(--sb-accent);
+            font-weight: 600;
+        }
+
+        .sb-icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sb-label {
+            overflow: hidden;
+            white-space: nowrap;
+            transition: opacity var(--ease), width var(--ease);
+        }
+
+        /* ── User footer ── */
+        .sb-foot {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 12px 12px;
+            border-top: 1px solid var(--sb-border);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .sb-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--sb-accent), #059669);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            letter-spacing: 0.5px;
+        }
+
+        .sb-user-info {
+            flex: 1;
+            overflow: hidden;
+            min-width: 0;
+            transition: opacity var(--ease), width var(--ease);
+        }
+
+        .sb-user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sb-user-role {
+            font-size: 11px;
+            color: var(--sb-text-dim);
+        }
+
+        .sb-logout-btn {
+            background: none;
+            border: none;
+            color: var(--sb-text-dim);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px 5px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color var(--ease), background var(--ease);
+            flex-shrink: 0;
+        }
+
+        .sb-logout-btn:hover {
+            color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        /* ================================================================
+           COLLAPSED STATE  (class toggled on body element)
+           ================================================================ */
+        body.sb-collapsed #sidebar {
+            width: var(--sb-min);
+        }
+
+        body.sb-collapsed .sb-brand-name,
+        body.sb-collapsed .sb-label,
+        body.sb-collapsed .sb-section-label,
+        body.sb-collapsed .sb-user-info {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        body.sb-collapsed .sb-tenant {
+            height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        body.sb-collapsed .sb-chevron {
+            transform: rotate(180deg);
+        }
+
+        body.sb-collapsed .sb-head {
+            justify-content: center;
+        }
+
+        body.sb-collapsed .sb-toggle-btn {
+            margin-left: 0;
+        }
+
+        body.sb-collapsed .sb-foot {
+            justify-content: center;
+        }
+
+        /* Tooltip on collapsed icons */
+        body.sb-collapsed .sb-link::after {
+            content: attr(data-label);
+            position: absolute;
+            left: calc(var(--sb-min) - 6px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1e3a5f;
+            color: #e2e8f0;
+            padding: 5px 11px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+            transition: opacity 0.15s ease;
+        }
+
+        body.sb-collapsed .sb-link:hover::after {
+            opacity: 1;
+        }
+
+        /* ================================================================
+           MAIN CONTENT
+           ================================================================ */
+        #main-wrap {
+            margin-left: var(--sb-w);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left var(--ease);
+        }
+
+        body.sb-collapsed #main-wrap {
+            margin-left: var(--sb-min);
+        }
+
+        /* ── Mobile top bar ── */
+        .sb-topbar {
+            display: none;
+            height: var(--topbar-h);
+            background: #fff;
+            border-bottom: 1px solid #e5e9ef;
+            padding: 0 16px;
+            align-items: center;
+            gap: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        .sb-topbar-brand {
+            font-weight: 700;
+            font-size: 15px;
+            color: #0d1b2a;
+        }
+
+        .sb-hamburger {
+            background: none;
+            border: 1px solid #e0e6ed;
+            border-radius: 7px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #374151;
+            font-size: 18px;
+            transition: background 0.15s;
+        }
+
+        .sb-hamburger:hover { background: #f4f6f9; }
+
+        /* ── Page body ── */
+        .page-body {
+            flex: 1;
+            padding: 28px 32px;
+        }
+
+        /* ── Backdrop ── */
+        #sb-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 1039;
+            backdrop-filter: blur(2px);
+        }
+
+        #sb-backdrop.active {
+            display: block;
+        }
+
+        /* ================================================================
+           RESPONSIVE — MOBILE
+           ================================================================ */
+        @@media (max-width: 991px) {
+            /* sidebar slides off-screen on mobile */
+            #sidebar {
+                transform: translateX(calc(-1 * var(--sb-w)));
+                width: var(--sb-w) !important; /* always full-width when open */
+                transition: transform var(--ease);
+            }
+
+            body.sb-open #sidebar {
+                transform: translateX(0);
+            }
+
+            /* content always full-width on mobile */
+            #main-wrap {
+                margin-left: 0 !important;
+            }
+
+            /* show top bar */
+            .sb-topbar {
+                display: flex;
+            }
+
+            .page-body {
+                padding: 18px 16px;
+            }
+
+            /* hide desktop collapse button on mobile */
+            #sb-collapse-btn {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">SmartStock</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="About">About</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Contact">Contact</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Sign In</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Sign Up</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Expenses" asp-action="Index">Expenses</a>
-                        </li>
 
+    @* Sidebar partial *@
+    @await Html.PartialAsync("_Sidebar")
 
-                    </ul>
+    @* Mobile backdrop overlay *@
+    <div id="sb-backdrop"></div>
+
+    @* Main content wrapper *@
+    <div id="main-wrap">
+
+        @* Mobile-only top bar *@
+        <header class="sb-topbar">
+            <button id="sb-mobile-btn" class="sb-hamburger" aria-label="Open menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <span class="sb-topbar-brand">SmartStock</span>
+        </header>
+
+        @* Page content *@
+        <div class="page-body">
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <main role="main">
+                @RenderBody()
+            </main>
+
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - SmartStock - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
+    @* Scripts *@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        (function () {
+            var STORAGE_KEY = 'ss_sb_v1';
+            var body      = document.body;
+            var sidebar   = document.getElementById('sidebar');
+            var backdrop  = document.getElementById('sb-backdrop');
+            var collapseBtn = document.getElementById('sb-collapse-btn');
+            var mobileBtn   = document.getElementById('sb-mobile-btn');
+
+            function isMobile() { return window.innerWidth <= 991; }
+
+            // ── Restore desktop collapse state ──────────────────────
+            if (!isMobile() && localStorage.getItem(STORAGE_KEY) === '1') {
+                body.classList.add('sb-collapsed');
+            }
+
+            // ── Desktop: icon-only collapse toggle ──────────────────
+            if (collapseBtn) {
+                collapseBtn.addEventListener('click', function () {
+                    if (isMobile()) return;
+                    body.classList.toggle('sb-collapsed');
+                    localStorage.setItem(STORAGE_KEY,
+                        body.classList.contains('sb-collapsed') ? '1' : '0');
+                });
+            }
+
+            // ── Mobile: hamburger opens sidebar ─────────────────────
+            if (mobileBtn) {
+                mobileBtn.addEventListener('click', function () {
+                    body.classList.toggle('sb-open');
+                    backdrop.classList.toggle('active');
+                });
+            }
+
+            // ── Backdrop click closes sidebar ───────────────────────
+            if (backdrop) {
+                backdrop.addEventListener('click', function () {
+                    body.classList.remove('sb-open');
+                    backdrop.classList.remove('active');
+                });
+            }
+
+            // ── Close sidebar on link click (mobile only) ───────────
+            document.querySelectorAll('.sb-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (isMobile()) {
+                        body.classList.remove('sb-open');
+                        backdrop.classList.remove('active');
+                    }
+                });
+            });
+
+            // ── Reapply on window resize ─────────────────────────────
+            window.addEventListener('resize', function () {
+                if (!isMobile()) {
+                    body.classList.remove('sb-open');
+                    backdrop.classList.remove('active');
+                    if (localStorage.getItem(STORAGE_KEY) === '1') {
+                        body.classList.add('sb-collapsed');
+                    } else {
+                        body.classList.remove('sb-collapsed');
+                    }
+                } else {
+                    body.classList.remove('sb-collapsed');
+                }
+            });
+        })();
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

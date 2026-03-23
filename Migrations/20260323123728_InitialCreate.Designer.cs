@@ -12,8 +12,8 @@ using SmartStock.Data;
 namespace SmartStock.Migrations
 {
     [DbContext(typeof(SmartStockDbContext))]
-    [Migration("20260125105333_Step5_AddSaleLifecycleFields")]
-    partial class Step5_AddSaleLifecycleFields
+    [Migration("20260323123728_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -92,6 +92,51 @@ namespace SmartStock.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("SmartStock.Models.Expense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(sysdatetime())");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ExpenseDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Payee")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ExpenseDate");
+
+                    b.ToTable("Expenses");
                 });
 
             modelBuilder.Entity("SmartStock.Models.InventoryTransaction", b =>
@@ -298,6 +343,19 @@ namespace SmartStock.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("OriginalSaleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RefundReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RefundedBy")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -321,6 +379,8 @@ namespace SmartStock.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OriginalSaleId");
+
                     b.HasIndex("TenantId");
 
                     b.ToTable("Sales");
@@ -333,6 +393,9 @@ namespace SmartStock.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("BuyingPriceAtSale")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -415,6 +478,41 @@ namespace SmartStock.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("StockHistories");
+                });
+
+            modelBuilder.Entity("SmartStock.Models.StockTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("StockTransactions");
                 });
 
             modelBuilder.Entity("SmartStock.Models.Supplier", b =>
@@ -628,11 +726,18 @@ namespace SmartStock.Migrations
 
             modelBuilder.Entity("SmartStock.Models.Sale", b =>
                 {
+                    b.HasOne("SmartStock.Models.Sale", "OriginalSale")
+                        .WithMany()
+                        .HasForeignKey("OriginalSaleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SmartStock.Models.Tenant", null)
                         .WithMany("Sales")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("OriginalSale");
                 });
 
             modelBuilder.Entity("SmartStock.Models.SaleItem", b =>
@@ -640,7 +745,7 @@ namespace SmartStock.Migrations
                     b.HasOne("SmartStock.Models.Product", "Product")
                         .WithMany("SaleItems")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("SmartStock.Models.Sale", "Sale")
@@ -671,6 +776,17 @@ namespace SmartStock.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SmartStock.Models.StockTransaction", b =>
+                {
+                    b.HasOne("SmartStock.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("SmartStock.Models.Supplier", b =>

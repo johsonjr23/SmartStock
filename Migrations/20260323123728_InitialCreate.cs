@@ -6,11 +6,31 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SmartStock.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial_App : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "Expenses",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Payee = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ExpenseDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysdatetime())")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Expenses", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Tenants",
                 columns: table => new
@@ -100,12 +120,27 @@ namespace SmartStock.Migrations
                     TenantId = table.Column<int>(type: "int", nullable: false),
                     InvoiceNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    VoidedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    VoidReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    VoidedBy = table.Column<int>(type: "int", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysdatetime())")
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysdatetime())"),
+                    OriginalSaleId = table.Column<int>(type: "int", nullable: true),
+                    RefundedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RefundReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    RefundedBy = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Sales", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Sales_Sales_OriginalSaleId",
+                        column: x => x.OriginalSaleId,
+                        principalTable: "Sales",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Sales_Tenants_TenantId",
                         column: x => x.TenantId,
@@ -231,12 +266,13 @@ namespace SmartStock.Migrations
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_InventoryTransactions_Sales_SaleId",
                         column: x => x.SaleId,
                         principalTable: "Sales",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -250,6 +286,7 @@ namespace SmartStock.Migrations
                     ProductId = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     SellingPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    BuyingPriceAtSale = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     SubTotal = table.Column<decimal>(type: "decimal(29,2)", nullable: false, computedColumnSql: "([Quantity]*[SellingPrice])", stored: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysdatetime())")
                 },
@@ -261,7 +298,7 @@ namespace SmartStock.Migrations
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_SaleItems_Sales_SaleId",
                         column: x => x.SaleId,
@@ -301,6 +338,30 @@ namespace SmartStock.Migrations
                         principalTable: "Tenants",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StockTransactions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Reference = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StockTransactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StockTransactions_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -345,6 +406,11 @@ namespace SmartStock.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Expenses_TenantId_ExpenseDate",
+                table: "Expenses",
+                columns: new[] { "TenantId", "ExpenseDate" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_InventoryTransactions_ProductId",
                 table: "InventoryTransactions",
                 column: "ProductId");
@@ -353,6 +419,11 @@ namespace SmartStock.Migrations
                 name: "IX_InventoryTransactions_SaleId",
                 table: "InventoryTransactions",
                 column: "SaleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InventoryTransactions_TenantId_ProductId",
+                table: "InventoryTransactions",
+                columns: new[] { "TenantId", "ProductId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Products_CategoryId",
@@ -400,6 +471,11 @@ namespace SmartStock.Migrations
                 column: "SaleId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Sales_OriginalSaleId",
+                table: "Sales",
+                column: "OriginalSaleId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Sales_TenantId",
                 table: "Sales",
                 column: "TenantId");
@@ -415,6 +491,11 @@ namespace SmartStock.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_StockTransactions_ProductId",
+                table: "StockTransactions",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Suppliers_TenantId",
                 table: "Suppliers",
                 column: "TenantId");
@@ -427,6 +508,9 @@ namespace SmartStock.Migrations
                 name: "AppUser");
 
             migrationBuilder.DropTable(
+                name: "Expenses");
+
+            migrationBuilder.DropTable(
                 name: "InventoryTransactions");
 
             migrationBuilder.DropTable(
@@ -437,6 +521,9 @@ namespace SmartStock.Migrations
 
             migrationBuilder.DropTable(
                 name: "StockHistories");
+
+            migrationBuilder.DropTable(
+                name: "StockTransactions");
 
             migrationBuilder.DropTable(
                 name: "Purchases");

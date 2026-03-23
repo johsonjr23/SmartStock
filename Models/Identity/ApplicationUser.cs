@@ -4,7 +4,9 @@ namespace SmartStock.Models
 {
     public class ApplicationUser : IdentityUser
     {
-        // Every user MUST belong to exactly one tenant (shop)
-        public int TenantId { get; set; }
+        // Null for SystemAdmin; required for all tenant users
+        public int? TenantId { get; set; }
+
+        public string? FullName { get; set; }
     }
 }

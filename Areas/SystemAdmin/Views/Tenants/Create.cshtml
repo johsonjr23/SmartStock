@@ -1,0 +1,84 @@
+@model SmartStock.ViewModels.CreateTenantViewModel
+@{
+    ViewData["Title"] = "New Tenant";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+
+        <div class="mb-4">
+            <a asp-area="SystemAdmin" asp-controller="Tenants" asp-action="Index"
+               class="text-muted text-decoration-none small">
+                <i class="bi bi-arrow-left me-1"></i> Back to Tenants
+            </a>
+            <h4 class="mt-2 fw-bold">Register New Tenant</h4>
+            <small class="text-muted">Creates the business and its administrator account in one step.</small>
+        </div>
+
+        <form asp-area="SystemAdmin" asp-controller="Tenants" asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold bg-dark text-white">
+                    <i class="bi bi-building me-2"></i>Business Details
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="BusinessName" class="form-label fw-semibold"></label>
+                        <input asp-for="BusinessName" class="form-control" placeholder="e.g. Karibu Shop" />
+                        <span asp-validation-for="BusinessName" class="text-danger small"></span>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="OwnerName" class="form-label fw-semibold"></label>
+                            <input asp-for="OwnerName" class="form-control" placeholder="Full name of owner" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Phone" class="form-label fw-semibold"></label>
+                            <input asp-for="Phone" class="form-control" placeholder="+255 7xx xxx xxx" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold bg-dark text-white">
+                    <i class="bi bi-person-lock me-2"></i>Admin Account Credentials
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="AdminEmail" class="form-label fw-semibold"></label>
+                        <input asp-for="AdminEmail" class="form-control" placeholder="admin@business.com" />
+                        <span asp-validation-for="AdminEmail" class="text-danger small"></span>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="AdminPassword" class="form-label fw-semibold"></label>
+                            <input asp-for="AdminPassword" class="form-control" />
+                            <span asp-validation-for="AdminPassword" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="AdminConfirmPassword" class="form-label fw-semibold"></label>
+                            <input asp-for="AdminConfirmPassword" class="form-control" />
+                            <span asp-validation-for="AdminConfirmPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger px-4">
+                    <i class="bi bi-check-lg me-1"></i> Create Tenant
+                </button>
+                <a asp-area="SystemAdmin" asp-controller="Tenants" asp-action="Index"
+                   class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,444 @@
+@{
+    Layout = null;
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    string SA(string c) => ctrl.Equals(c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - SmartStock Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <style>
+        /* ================================================================
+           SYSTEM ADMIN — ROSE/RED ACCENT PLATFORM
+           ================================================================ */
+        :root {
+            --sa-w:         260px;
+            --sa-min:       64px;
+            --sa-bg:        #1a0a0e;
+            --sa-surface:   #2a1018;
+            --sa-border:    rgba(255, 255, 255, 0.07);
+            --sa-text:      #9a7a80;
+            --sa-text-dim:  #5a3a40;
+            --sa-accent:    #f43f5e;
+            --sa-accent-bg: rgba(244, 63, 94, 0.1);
+            --page-bg:      #fdf4f5;
+            --topbar-h:     54px;
+            --ease:         0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+
+        body {
+            background: var(--page-bg);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        /* ── Sidebar ── */
+        #sa-sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            height: 100vh;
+            width: var(--sa-w);
+            background: var(--sa-bg);
+            display: flex;
+            flex-direction: column;
+            transition: width var(--ease);
+            overflow: hidden;
+            z-index: 1040;
+            border-right: 1px solid var(--sa-border);
+        }
+
+        .sa-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 14px;
+            height: 60px;
+            border-bottom: 1px solid var(--sa-border);
+            flex-shrink: 0;
+        }
+
+        .sa-logo-mark {
+            width: 34px; height: 34px;
+            background: var(--sa-accent);
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 14px; color: #fff;
+            flex-shrink: 0;
+        }
+
+        .sa-brand-name {
+            color: #fecdd3;
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            flex: 1;
+            transition: opacity var(--ease), width var(--ease);
+        }
+
+        .sa-brand-sub {
+            display: block;
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--sa-text);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .sa-toggle-btn {
+            width: 28px; height: 28px;
+            border: 1px solid var(--sa-border);
+            background: none;
+            color: var(--sa-text-dim);
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0;
+            transition: background var(--ease), color var(--ease);
+        }
+        .sa-toggle-btn:hover { background: var(--sa-surface); color: #fecdd3; }
+
+        .sa-chevron {
+            font-size: 13px;
+            transition: transform var(--ease);
+        }
+
+        /* Nav */
+        .sa-nav {
+            flex: 1;
+            padding: 10px 8px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: var(--sa-surface) transparent;
+        }
+
+        .sa-section-label {
+            font-size: 10px;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--sa-text-dim);
+            padding: 6px 10px 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity var(--ease);
+        }
+
+        .sa-link {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 9px 10px;
+            border-radius: 8px;
+            color: var(--sa-text);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            white-space: nowrap;
+            border-left: 3px solid transparent;
+            margin-bottom: 2px;
+            transition: background var(--ease), color var(--ease), border-color var(--ease);
+            position: relative;
+        }
+
+        .sa-link:hover { background: var(--sa-surface); color: #fecdd3; text-decoration: none; }
+
+        .sa-link.active {
+            background: var(--sa-accent-bg);
+            color: var(--sa-accent);
+            border-left-color: var(--sa-accent);
+            font-weight: 600;
+        }
+
+        .sa-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+
+        .sa-label {
+            overflow: hidden;
+            white-space: nowrap;
+            transition: opacity var(--ease), width var(--ease);
+        }
+
+        /* Footer */
+        .sa-foot {
+            padding: 12px;
+            border-top: 1px solid var(--sa-border);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .sa-user-row {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .sa-avatar {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--sa-accent), #be123c);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .sa-user-info {
+            flex: 1; min-width: 0; overflow: hidden;
+            transition: opacity var(--ease), width var(--ease);
+        }
+
+        .sa-user-name {
+            font-size: 13px; font-weight: 600;
+            color: #fecdd3;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .sa-user-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            background: var(--sa-accent-bg);
+            color: var(--sa-accent);
+            padding: 1px 7px;
+            border-radius: 20px;
+            border: 1px solid rgba(244,63,94,0.2);
+        }
+
+        .sa-logout-btn {
+            background: none; border: none;
+            color: var(--sa-text-dim);
+            font-size: 16px; cursor: pointer;
+            padding: 4px 5px; border-radius: 5px;
+            display: flex; align-items: center;
+            transition: color var(--ease), background var(--ease);
+            flex-shrink: 0;
+        }
+        .sa-logout-btn:hover { color: #f87171; background: rgba(248,113,113,0.1); }
+
+        /* ── Collapsed ── */
+        body.sa-collapsed #sa-sidebar { width: var(--sa-min); }
+        body.sa-collapsed .sa-brand-name,
+        body.sa-collapsed .sa-label,
+        body.sa-collapsed .sa-section-label,
+        body.sa-collapsed .sa-user-info { opacity: 0; width: 0; overflow: hidden; }
+        body.sa-collapsed .sa-chevron { transform: rotate(180deg); }
+        body.sa-collapsed .sa-head { justify-content: center; }
+        body.sa-collapsed .sa-user-row { justify-content: center; }
+
+        body.sa-collapsed .sa-link::after {
+            content: attr(data-label);
+            position: absolute;
+            left: calc(var(--sa-min) - 4px);
+            top: 50%; transform: translateY(-50%);
+            background: #2a1018;
+            color: #fecdd3;
+            padding: 5px 11px;
+            border-radius: 7px;
+            font-size: 12px; font-weight: 500;
+            white-space: nowrap;
+            opacity: 0; pointer-events: none;
+            z-index: 9999;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+            transition: opacity 0.15s ease;
+        }
+        body.sa-collapsed .sa-link:hover::after { opacity: 1; }
+
+        /* ── Main content ── */
+        #sa-main {
+            margin-left: var(--sa-w);
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            transition: margin-left var(--ease);
+        }
+        body.sa-collapsed #sa-main { margin-left: var(--sa-min); }
+
+        /* Mobile top bar */
+        .sa-topbar {
+            display: none;
+            height: var(--topbar-h);
+            background: #fff;
+            border-bottom: 1px solid #fecdd3;
+            padding: 0 16px;
+            align-items: center;
+            gap: 14px;
+            position: sticky; top: 0; z-index: 200;
+        }
+
+        .sa-topbar-brand { font-weight: 700; font-size: 14px; color: var(--sa-accent); }
+
+        .sa-hamburger {
+            background: none; border: 1px solid #fecdd3;
+            border-radius: 7px; width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--sa-accent); font-size: 18px;
+        }
+        .sa-hamburger:hover { background: #fff1f2; }
+
+        .sa-page-body { flex: 1; padding: 28px 32px; }
+
+        #sa-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); z-index: 1039;
+            backdrop-filter: blur(2px);
+        }
+        #sa-backdrop.active { display: block; }
+
+        @@media (max-width: 991px) {
+            #sa-sidebar {
+                transform: translateX(calc(-1 * var(--sa-w)));
+                width: var(--sa-w) !important;
+                transition: transform var(--ease);
+            }
+            body.sa-open #sa-sidebar { transform: translateX(0); }
+            #sa-main { margin-left: 0 !important; }
+            .sa-topbar { display: flex; }
+            .sa-page-body { padding: 18px 16px; }
+            #sa-collapse-btn { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    @* ── System Admin Sidebar ── *@
+    <aside id="sa-sidebar">
+
+        @* Brand *@
+        <div class="sa-head">
+            <div class="sa-logo-mark"><i class="bi bi-shield-check" style="font-size:16px;"></i></div>
+            <div class="sa-brand-name">
+                SmartStock
+                <span class="sa-brand-sub">System Admin</span>
+            </div>
+            <button id="sa-collapse-btn" class="sa-toggle-btn" title="Collapse" aria-label="Collapse sidebar">
+                <i class="bi bi-chevron-left sa-chevron"></i>
+            </button>
+        </div>
+
+        @* Nav *@
+        <nav class="sa-nav" aria-label="Admin navigation">
+            <div class="sa-section-label">Platform</div>
+
+            <a class="sa-link @SA("Tenants")"
+               asp-area="SystemAdmin" asp-controller="Tenants" asp-action="Index"
+               data-label="Tenants">
+                <i class="bi bi-building sa-icon"></i>
+                <span class="sa-label">Tenants</span>
+            </a>
+        </nav>
+
+        @* Footer *@
+        <div class="sa-foot">
+            <div class="sa-user-row">
+                <div class="sa-avatar">SA</div>
+                <div class="sa-user-info">
+                    <div class="sa-user-name">@User.Identity?.Name</div>
+                    <span class="sa-user-badge">System Admin</span>
+                </div>
+                <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="sa-logout-btn" title="Sign out">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    @* Backdrop *@
+    <div id="sa-backdrop"></div>
+
+    @* Main content *@
+    <div id="sa-main">
+
+        @* Mobile top bar *@
+        <header class="sa-topbar">
+            <button id="sa-mobile-btn" class="sa-hamburger" aria-label="Open menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <span class="sa-topbar-brand">SmartStock Admin</span>
+        </header>
+
+        @* Page body *@
+        <div class="sa-page-body">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show mb-4">
+                    <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show mb-4">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @RenderBody()
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            var SK = 'ss_sa_v1';
+            var body = document.body;
+            var backdrop = document.getElementById('sa-backdrop');
+
+            function isMobile() { return window.innerWidth <= 991; }
+
+            if (!isMobile() && localStorage.getItem(SK) === '1')
+                body.classList.add('sa-collapsed');
+
+            document.getElementById('sa-collapse-btn')?.addEventListener('click', function () {
+                if (isMobile()) return;
+                body.classList.toggle('sa-collapsed');
+                localStorage.setItem(SK, body.classList.contains('sa-collapsed') ? '1' : '0');
+            });
+
+            document.getElementById('sa-mobile-btn')?.addEventListener('click', function () {
+                body.classList.toggle('sa-open');
+                backdrop.classList.toggle('active');
+            });
+
+            backdrop?.addEventListener('click', function () {
+                body.classList.remove('sa-open');
+                backdrop.classList.remove('active');
+            });
+
+            document.querySelectorAll('.sa-link').forEach(function (l) {
+                l.addEventListener('click', function () {
+                    if (isMobile()) {
+                        body.classList.remove('sa-open');
+                        backdrop.classList.remove('active');
+                    }
+                });
+            });
+
+            window.addEventListener('resize', function () {
+                if (!isMobile()) {
+                    body.classList.remove('sa-open');
+                    backdrop.classList.remove('active');
+                    if (localStorage.getItem(SK) === '1') body.classList.add('sa-collapsed');
+                    else body.classList.remove('sa-collapsed');
+                } else {
+                    body.classList.remove('sa-collapsed');
+                }
+            });
+        })();
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

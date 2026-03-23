@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using SmartStock.Data;
@@ -6,6 +7,7 @@ using SmartStock.Models;
 
 namespace SmartStock.Controllers
 {
+    [Authorize(Roles = "TenantAdmin,Manager")]
     public class CategoriesController : BaseController
     {
         private readonly SmartStockDbContext _context;
