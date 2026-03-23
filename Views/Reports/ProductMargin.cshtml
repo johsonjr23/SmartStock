@@ -1,41 +1,174 @@
-﻿
 @model SmartStock.ViewModels.ProductMarginReportViewModel
-<h2>Product Margin Report</h2>
+@{
+    ViewData["Title"] = "Product Margin";
+    var totalRevenue = Model.Items.Sum(i => i.Revenue);
+    var totalCost    = Model.Items.Sum(i => i.Cost);
+    var totalProfit  = Model.Items.Sum(i => i.Profit);
+    var overallMargin = totalRevenue == 0 ? 0 : totalProfit / totalRevenue * 100;
+}
 
-<form method="get">
-    <label>From:</label>
-    <input type="date" name="fromDate"
-           value="@Model.FromDate?.ToString("yyyy-MM-dd")" />
+<style>
+    .rpt-header { margin-bottom: 28px; }
+    .rpt-title  { font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 2px; }
+    .rpt-meta   { font-size: 13px; color: #6b7280; }
 
-    <label>To:</label>
-    <input type="date" name="toDate"
-           value="@Model.ToDate?.ToString("yyyy-MM-dd")" />
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .metric-card { background: #fff; border-radius: 12px; padding: 18px 20px; border: 1px solid #e5e7eb; }
+    .metric-card .mc-label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; }
+    .metric-card .mc-value { font-size: 20px; font-weight: 700; color: #111827; line-height: 1; }
+    .metric-card .mc-value.green { color: #059669; }
+    .metric-card .mc-value.red   { color: #dc2626; }
+    .metric-card .mc-value.blue  { color: #2563eb; }
+    .metric-card .mc-value.amber { color: #d97706; }
 
-    <button type="submit">Filter</button>
+    .rpt-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 20px; }
+    .rpt-card-head { padding: 14px 20px; border-bottom: 1px solid #f3f4f6; font-weight: 600; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .rpt-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .rpt-table th { padding: 11px 16px; background: #f9fafb; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    .rpt-table td { padding: 11px 16px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+    .rpt-table tbody tr:last-child td { border-bottom: none; }
+    .rpt-table tfoot td { padding: 12px 16px; font-weight: 700; background: #f9fafb; border-top: 2px solid #e5e7eb; }
+    .rpt-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .margin-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+    .margin-bar { height: 6px; border-radius: 3px; background: #e5e7eb; flex: 1; overflow: hidden; }
+    .margin-bar-fill { height: 100%; border-radius: 3px; background: #10b981; }
+    .margin-bar-fill.warn  { background: #f59e0b; }
+    .margin-bar-fill.bad   { background: #ef4444; }
+    .margin-pct { font-size: 12px; font-weight: 600; min-width: 42px; text-align: right; }
+    .margin-pct.good { color: #059669; }
+    .margin-pct.warn { color: #d97706; }
+    .margin-pct.bad  { color: #dc2626; }
+
+    @@media print {
+        #sidebar, nav.sb-nav, .rpt-no-print { display: none !important; }
+        #main-content, body { margin: 0 !important; padding: 0 !important; }
+        .rpt-card { border: 1px solid #ccc; }
+        @@page { margin: 15mm; }
+    }
+</style>
+
+<div class="rpt-header d-flex flex-wrap align-items-start justify-content-between gap-3">
+    <div>
+        <div class="rpt-title">
+            <i class="bi bi-graph-up me-2" style="color:#10b981;"></i>Product Margin
+        </div>
+        <div class="rpt-meta">
+            @Model.TenantName &mdash; @Model.FromDate?.ToString("MMM d, yyyy") to @Model.ToDate?.ToString("MMM d, yyyy")
+        </div>
+    </div>
+    <div class="d-flex gap-2 rpt-no-print">
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print / PDF
+        </button>
+    </div>
+</div>
+
+<form method="get" class="rpt-card rpt-no-print mb-4" style="padding:16px 20px;">
+    <div class="row g-3 align-items-end">
+        <div class="col-sm-auto">
+            <label class="form-label mb-1" style="font-size:12px;font-weight:600;">From</label>
+            <input type="date" class="form-control form-control-sm" name="fromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-sm-auto">
+            <label class="form-label mb-1" style="font-size:12px;font-weight:600;">To</label>
+            <input type="date" class="form-control form-control-sm" name="toDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-sm-auto">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="bi bi-funnel me-1"></i>Filter
+            </button>
+        </div>
+    </div>
 </form>
 
-<table class="table table-bordered mt-3">
-    <thead>
-        <tr>
-            <th>Product</th>
-            <th>Qty Sold</th>
-            <th>Revenue</th>
-            <th>Cost</th>
-            <th>Profit</th>
-            <th>Margin %</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Items)
-        {
-            <tr>
-                <td>@item.ProductName</td>
-                <td>@item.TotalQuantity</td>
-                <td>@item.Revenue.ToString("N2")</td>
-                <td>@item.Cost.ToString("N2")</td>
-                <td>@item.Profit.ToString("N2")</td>
-                <td>@item.MarginPercentage.ToString("N2")%</td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="metric-grid">
+    <div class="metric-card">
+        <div class="mc-label">Products</div>
+        <div class="mc-value">@Model.Items.Count</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Total Revenue</div>
+        <div class="mc-value blue">@totalRevenue.ToString("N2")</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Total Cost</div>
+        <div class="mc-value amber">@totalCost.ToString("N2")</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Total Profit</div>
+        <div class="mc-value @(totalProfit >= 0 ? "green" : "red")">@totalProfit.ToString("N2")</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Overall Margin</div>
+        <div class="mc-value @(overallMargin >= 20 ? "green" : overallMargin >= 10 ? "amber" : "red")">@overallMargin.ToString("N1")%</div>
+    </div>
+</div>
+
+<div class="rpt-card">
+    <div class="rpt-card-head">
+        <i class="bi bi-table" style="color:#10b981;"></i>
+        Per-Product Breakdown
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <div style="padding:40px;text-align:center;color:#9ca3af;">
+            <i class="bi bi-inbox" style="font-size:30px;"></i>
+            <div class="mt-2">No sales data for this period.</div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="rpt-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th class="num">Qty Sold</th>
+                        <th class="num">Revenue</th>
+                        <th class="num">Cost</th>
+                        <th class="num">Profit</th>
+                        <th>Margin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int rank = 1; }
+                    @foreach (var item in Model.Items)
+                    {
+                        var barClass = item.MarginPercentage >= 20 ? "" : item.MarginPercentage >= 10 ? "warn" : "bad";
+                        var pctClass = item.MarginPercentage >= 20 ? "good" : item.MarginPercentage >= 10 ? "warn" : "bad";
+                        var barWidth = Math.Min(100, Math.Max(0, (double)item.MarginPercentage));
+                        <tr>
+                            <td style="color:#9ca3af;font-size:12px;">@rank</td>
+                            <td style="font-weight:500;">@item.ProductName</td>
+                            <td class="num">@item.TotalQuantity</td>
+                            <td class="num">@item.Revenue.ToString("N2")</td>
+                            <td class="num" style="color:#6b7280;">@item.Cost.ToString("N2")</td>
+                            <td class="num" style="@(item.Profit >= 0 ? "color:#059669;" : "color:#dc2626;") font-weight:600;">@item.Profit.ToString("N2")</td>
+                            <td>
+                                <div class="margin-bar-wrap">
+                                    <div class="margin-bar">
+                                        <div class="margin-bar-fill @barClass" style="width:@barWidth.ToString("F0")%;"></div>
+                                    </div>
+                                    <span class="margin-pct @pctClass">@item.MarginPercentage.ToString("N1")%</span>
+                                </div>
+                            </td>
+                        </tr>
+                        rank++;
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">Total</td>
+                        <td class="num">@Model.Items.Sum(i => i.TotalQuantity)</td>
+                        <td class="num">@totalRevenue.ToString("N2")</td>
+                        <td class="num">@totalCost.ToString("N2")</td>
+                        <td class="num" style="@(totalProfit >= 0 ? "color:#059669;" : "color:#dc2626;")">@totalProfit.ToString("N2")</td>
+                        <td><span class="margin-pct @(overallMargin >= 20 ? "good" : overallMargin >= 10 ? "warn" : "bad")">@overallMargin.ToString("N1")%</span></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+</div>

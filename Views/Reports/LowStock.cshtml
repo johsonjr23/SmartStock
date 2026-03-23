@@ -1,0 +1,140 @@
+@model SmartStock.ViewModels.Reports.LowStockReportViewModel
+@{
+    ViewData["Title"] = "Low Stock Alert";
+    var tz    = TimeZoneInfo.FindSystemTimeZoneById("E. Africa Standard Time");
+    var local = TimeZoneInfo.ConvertTime(Model.GeneratedAtUtc, tz);
+}
+
+<style>
+    .rpt-header { margin-bottom: 28px; }
+    .rpt-title  { font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 2px; }
+    .rpt-meta   { font-size: 13px; color: #6b7280; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .metric-card { background: #fff; border-radius: 12px; padding: 18px 20px; border: 1px solid #e5e7eb; }
+    .metric-card .mc-label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; }
+    .metric-card .mc-value { font-size: 22px; font-weight: 700; color: #111827; line-height: 1; }
+    .metric-card .mc-value.red    { color: #dc2626; }
+    .metric-card .mc-value.amber  { color: #d97706; }
+    .metric-card .mc-value.green  { color: #059669; }
+
+    .rpt-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 20px; }
+    .rpt-card-head { padding: 14px 20px; border-bottom: 1px solid #f3f4f6; font-weight: 600; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .rpt-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .rpt-table th { padding: 11px 16px; background: #f9fafb; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    .rpt-table td { padding: 11px 16px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+    .rpt-table tbody tr:last-child td { border-bottom: none; }
+    .rpt-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .status-critical { display:inline-flex;align-items:center;gap:4px;background:#fee2e2;color:#991b1b;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600; }
+    .status-low      { display:inline-flex;align-items:center;gap:4px;background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600; }
+    .sku-badge { font-size:11px;background:#f3f4f6;color:#6b7280;padding:2px 7px;border-radius:4px;font-family:monospace; }
+
+    @@media print {
+        #sidebar, nav.sb-nav, .rpt-no-print { display: none !important; }
+        #main-content, body { margin: 0 !important; padding: 0 !important; }
+        .rpt-card { border: 1px solid #ccc; }
+        @@page { margin: 15mm; }
+    }
+</style>
+
+<div class="rpt-header d-flex flex-wrap align-items-start justify-content-between gap-3">
+    <div>
+        <div class="rpt-title">
+            <i class="bi bi-exclamation-triangle me-2" style="color:#d97706;"></i>Low Stock Alert
+        </div>
+        <div class="rpt-meta">
+            @Model.TenantName &mdash; Generated @local.ToString("MMM d, yyyy HH:mm")
+        </div>
+    </div>
+    <div class="d-flex gap-2 rpt-no-print">
+        <a asp-action="LowStock" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+        </a>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print / PDF
+        </button>
+    </div>
+</div>
+
+<div class="metric-grid">
+    <div class="metric-card" style="@(Model.CriticalCount > 0 ? "border-color:#fca5a5;" : "")">
+        <div class="mc-label">Out of Stock</div>
+        <div class="mc-value @(Model.CriticalCount > 0 ? "red" : "green")">@Model.CriticalCount</div>
+    </div>
+    <div class="metric-card" style="@(Model.LowCount > 0 ? "border-color:#fde68a;" : "")">
+        <div class="mc-label">Below Reorder</div>
+        <div class="mc-value @(Model.LowCount > 0 ? "amber" : "green")">@Model.LowCount</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Total At Risk</div>
+        <div class="mc-value @(Model.Items.Count > 0 ? "amber" : "green")">@Model.Items.Count</div>
+    </div>
+</div>
+
+@if (Model.CriticalCount > 0)
+{
+    <div class="alert d-flex align-items-center gap-2 mb-3"
+         style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;color:#991b1b;">
+        <i class="bi bi-exclamation-octagon-fill"></i>
+        <strong>@Model.CriticalCount product(s) are completely out of stock</strong> — immediate restocking required.
+    </div>
+}
+
+<div class="rpt-card">
+    <div class="rpt-card-head">
+        <i class="bi bi-box-seam" style="color:#d97706;"></i>
+        Products Requiring Attention
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <div style="padding:48px;text-align:center;color:#9ca3af;">
+            <i class="bi bi-check-circle" style="font-size:36px;color:#10b981;"></i>
+            <div class="mt-2" style="font-weight:600;color:#374151;">All products are well stocked</div>
+            <div style="font-size:13px;">No products are below their reorder level.</div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="rpt-table">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th class="num">Current Stock</th>
+                        <th class="num">Reorder Level</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr style="@(item.IsCritical ? "background:#fff5f5;" : "")">
+                            <td>@(string.IsNullOrWhiteSpace(item.SKU) ? "—" : $"<span class='sku-badge'>{item.SKU}</span>")</td>
+                            <td style="font-weight:500;">@item.Name</td>
+                            <td style="color:#6b7280;">@item.Category</td>
+                            <td class="num" style="@(item.IsCritical ? "color:#dc2626;font-weight:700;" : "color:#d97706;font-weight:600;")">
+                                @item.CurrentStock.ToString("N0")
+                            </td>
+                            <td class="num" style="color:#6b7280;">
+                                @(item.ReorderLevel.HasValue ? item.ReorderLevel.Value.ToString() : "—")
+                            </td>
+                            <td>
+                                @if (item.IsCritical)
+                                {
+                                    <span class="status-critical"><i class="bi bi-x-circle-fill"></i>Out of Stock</span>
+                                }
+                                else
+                                {
+                                    <span class="status-low"><i class="bi bi-exclamation-triangle-fill"></i>Low Stock</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

@@ -234,6 +234,47 @@
             transition: opacity var(--ease), width var(--ease);
         }
 
+        /* ── Reports sub-menu ── */
+        .sb-group { margin-bottom: 2px; }
+
+        .sb-group-toggle {
+            width: 100%;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+        }
+        .sb-group-toggle .sb-caret {
+            font-size: 11px;
+            transition: transform var(--ease);
+            flex-shrink: 0;
+        }
+        .sb-group-toggle[aria-expanded="true"] .sb-caret { transform: rotate(180deg); }
+
+        .sb-sub {
+            padding: 4px 0 4px 28px;
+        }
+        .sb-sub-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 7px;
+            color: var(--sb-text-dim);
+            text-decoration: none;
+            font-size: 12.5px;
+            font-weight: 500;
+            white-space: nowrap;
+            margin-bottom: 1px;
+            transition: background var(--ease), color var(--ease);
+        }
+        .sb-sub-link i { font-size: 13px; flex-shrink: 0; }
+        .sb-sub-link:hover { background: var(--sb-surface); color: #d1fae5; text-decoration: none; }
+        .sb-sub-link.active { color: var(--sb-accent); font-weight: 600; background: var(--sb-accent-bg); }
+
+        body.sb-collapsed .sb-sub { display: none; }
+        body.sb-collapsed .sb-caret { display: none; }
+
         /* ── User footer ── */
         .sb-foot {
             display: flex;

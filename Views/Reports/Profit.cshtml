@@ -1,117 +1,229 @@
-﻿@model SmartStock.ViewModels.ProfitReportViewModel
-@using System
-
+@model SmartStock.ViewModels.ProfitReportViewModel
 @{
+    ViewData["Title"] = "Profit & Loss";
     var isSw = string.Equals(Model.Lang, "sw", StringComparison.OrdinalIgnoreCase);
+    var isProfit = Model.NetProfit >= 0;
 }
 
-<div class="d-flex justify-content-between align-items-center">
-    <h2 class="mb-0">@Model.Labels.ReportTitle</h2>
+<style>
+    .rpt-header { margin-bottom: 28px; }
+    .rpt-title  { font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 2px; }
+    .rpt-meta   { font-size: 13px; color: #6b7280; }
+    .rpt-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .metric-card { background: #fff; border-radius: 12px; padding: 18px 20px; border: 1px solid #e5e7eb; }
+    .metric-card .mc-label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; }
+    .metric-card .mc-value { font-size: 22px; font-weight: 700; color: #111827; line-height: 1; }
+    .metric-card .mc-value.green  { color: #059669; }
+    .metric-card .mc-value.red    { color: #dc2626; }
+    .metric-card .mc-value.blue   { color: #2563eb; }
+    .metric-card .mc-value.amber  { color: #d97706; }
+
+    .rpt-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 20px; }
+    .rpt-card-head { padding: 14px 20px; border-bottom: 1px solid #f3f4f6; font-weight: 600; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .rpt-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .rpt-table th { padding: 11px 16px; background: #f9fafb; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    .rpt-table td { padding: 11px 16px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+    .rpt-table tbody tr:last-child td { border-bottom: none; }
+    .rpt-table tfoot td, .rpt-table tfoot th { padding: 12px 16px; font-weight: 700; background: #f9fafb; border-top: 2px solid #e5e7eb; }
+    .rpt-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .rpt-table .deduct { color: #dc2626; }
+    .rpt-table .profit { color: #059669; font-weight: 700; font-size: 15px; }
+    .rpt-table .loss   { color: #dc2626; font-weight: 700; font-size: 15px; }
+    .rpt-divider-row td { background: #f3f4f6 !important; padding: 5px 16px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #9ca3af; border-bottom: 1px solid #e5e7eb; }
+
+    .badge-profit { display: inline-flex; align-items: center; gap: 5px; background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-loss   { display: inline-flex; align-items: center; gap: 5px; background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+    .lang-switch a { font-size: 12px; color: #6b7280; text-decoration: none; padding: 3px 8px; border-radius: 5px; }
+    .lang-switch a.active-lang { background: #f3f4f6; color: #111827; font-weight: 600; }
+    .lang-switch span { color: #d1d5db; }
+
+    @@media print {
+        #sidebar, #sa-sidebar, .sa-topbar, .sb-head + *, nav.sb-nav, .rpt-no-print,
+        .rpt-actions .btn, form.rpt-filter { display: none !important; }
+        #main-content, #sa-main, body { margin: 0 !important; padding: 0 !important; }
+        .rpt-card { border: 1px solid #ccc; box-shadow: none; }
+        .metric-card { border: 1px solid #ccc; }
+        body { font-size: 12px; }
+        @@page { margin: 15mm; }
+    }
+</style>
+
+<div class="rpt-header d-flex flex-wrap align-items-start justify-content-between gap-3">
     <div>
-        <a asp-action="Profit"
-           asp-route-from="@Model.From.ToString("yyyy-MM-dd")"
-           asp-route-to="@Model.To.ToString("yyyy-MM-dd")"
-           asp-route-lang="en"
-           class="@(isSw ? "" : "fw-bold")">
-            English
-        </a>
-        <span> | </span>
-        <a asp-action="Profit"
-           asp-route-from="@Model.From.ToString("yyyy-MM-dd")"
-           asp-route-to="@Model.To.ToString("yyyy-MM-dd")"
-           asp-route-lang="sw"
-           class="@(isSw ? "fw-bold" : "")">
-            Kiswahili
-        </a>
+        <div class="rpt-title">
+            <i class="bi bi-bar-chart-line me-2" style="color:#10b981;"></i>@Model.Labels.ReportTitle
+        </div>
+        <div class="rpt-meta">
+            @Model.TenantName &mdash; @Model.From.ToString("MMM d, yyyy") to @Model.To.ToString("MMM d, yyyy")
+        </div>
+    </div>
+    <div class="rpt-actions rpt-no-print">
+        <div class="lang-switch d-flex align-items-center gap-1">
+            <a asp-action="Profit" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-lang="en"
+               class="@(!isSw ? "active-lang" : "")">EN</a>
+            <span>|</span>
+            <a asp-action="Profit" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-lang="sw"
+               class="@(isSw ? "active-lang" : "")">SW</a>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print / PDF
+        </button>
     </div>
 </div>
 
-<form method="get" class="mb-3 mt-3">
+@* ── Filter ── *@
+<form method="get" class="rpt-card rpt-filter rpt-no-print mb-4" style="padding:16px 20px;">
     <input type="hidden" name="lang" value="@Model.Lang" />
-
-    <label>@Model.Labels.FromDate</label>
-    <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
-
-    <label style="margin-left:10px;">@Model.Labels.ToDate</label>
-    <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
-
-    <button type="submit" class="btn btn-secondary" style="margin-left:10px;">
-        @Model.Labels.Generate
-    </button>
+    <div class="row g-3 align-items-end">
+        <div class="col-sm-auto">
+            <label class="form-label mb-1" style="font-size:12px;font-weight:600;">@Model.Labels.FromDate</label>
+            <input type="date" class="form-control form-control-sm" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-sm-auto">
+            <label class="form-label mb-1" style="font-size:12px;font-weight:600;">@Model.Labels.ToDate</label>
+            <input type="date" class="form-control form-control-sm" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-sm-auto">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="bi bi-funnel me-1"></i>@Model.Labels.Generate
+            </button>
+        </div>
+    </div>
 </form>
 
-<hr />
+@* ── Metric Cards ── *@
+<div class="metric-grid">
+    <div class="metric-card">
+        <div class="mc-label">@Model.Labels.GrossSales</div>
+        <div class="mc-value blue">@Model.GrossSalesAmount.ToString("N2")</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">@Model.Labels.NetSales</div>
+        <div class="mc-value blue">@Model.NetSalesAmount.ToString("N2")</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">@Model.Labels.GrossProfit</div>
+        <div class="mc-value @(Model.GrossProfit >= 0 ? "green" : "red")">@Model.GrossProfit.ToString("N2")</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">@Model.Labels.TotalExpenses</div>
+        <div class="mc-value amber">@Model.TotalExpenses.ToString("N2")</div>
+    </div>
+    <div class="metric-card" style="@(isProfit ? "border-color:#6ee7b7;" : "border-color:#fca5a5;")">
+        <div class="mc-label">@Model.Labels.NetProfit</div>
+        <div class="mc-value @(isProfit ? "green" : "red")">@Model.NetProfit.ToString("N2")</div>
+    </div>
+</div>
 
-<h4>
-    @(isSw ? "Muhtasari" : "Summary")
-    (@Model.From.ToString("yyyy-MM-dd") to @Model.To.ToString("yyyy-MM-dd"))
-</h4>
+@* ── P&L Statement ── *@
+<div class="rpt-card mb-4">
+    <div class="rpt-card-head">
+        <i class="bi bi-receipt" style="color:#10b981;"></i>
+        @(isSw ? "Muhtasari wa Faida na Hasara" : "Profit & Loss Statement")
+        @if (isProfit)
+        {
+            <span class="badge-profit ms-2"><i class="bi bi-arrow-up-circle-fill"></i>@(isSw ? "Faida" : "Profit")</span>
+        }
+        else
+        {
+            <span class="badge-loss ms-2"><i class="bi bi-arrow-down-circle-fill"></i>@(isSw ? "Hasara" : "Loss")</span>
+        }
+    </div>
+    <table class="rpt-table">
+        <tbody>
+            <tr class="rpt-divider-row"><td colspan="2">@(isSw ? "Mapato" : "Revenue")</td></tr>
+            <tr>
+                <td>@Model.Labels.GrossSales</td>
+                <td class="num">@Model.GrossSalesAmount.ToString("N2")</td>
+            </tr>
+            <tr>
+                <td class="deduct">@Model.Labels.Refunds</td>
+                <td class="num deduct">– @Model.RefundAmount.ToString("N2")</td>
+            </tr>
+            <tr style="font-weight:600;">
+                <td>@Model.Labels.NetSales</td>
+                <td class="num">@Model.NetSalesAmount.ToString("N2")</td>
+            </tr>
 
-<table class="table">
-    <tr>
-        <th>@Model.Labels.GrossSales</th>
-        <td class="text-end">@Model.GrossSalesAmount.ToString("N2")</td>
-    </tr>
-    <tr>
-        <th>@Model.Labels.Refunds</th>
-        <td class="text-end">@Model.RefundAmount.ToString("N2")</td>
-    </tr>
-    <tr>
-        <th>@Model.Labels.NetSales</th>
-        <td class="text-end">@Model.NetSalesAmount.ToString("N2")</td>
-    </tr>
+            <tr class="rpt-divider-row"><td colspan="2">@(isSw ? "Gharama za Bidhaa (COGS)" : "Cost of Goods Sold (COGS)")</td></tr>
+            <tr>
+                <td>@(isSw ? "Gharama ya Bidhaa Zilizouzwa" : "Cost of Sold Products")</td>
+                <td class="num deduct">@Model.SalesCOGS.ToString("N2")</td>
+            </tr>
+            <tr>
+                <td>@(isSw ? "Gharama Iliyorejeshwa" : "Returned Cost")</td>
+                <td class="num" style="color:#059669;">+ @Model.RefundCOGS.ToString("N2")</td>
+            </tr>
+            <tr style="font-weight:600;">
+                <td>@(isSw ? "Jumla ya COGS" : "Net COGS")</td>
+                <td class="num deduct">@Model.NetCOGS.ToString("N2")</td>
+            </tr>
 
-    <tr>
-        <th>@(isSw ? "Gharama ya Bidhaa Zilizouzwa" : "Cost of Sold Products")</th>
-        <td class="text-end">@Model.SalesCOGS.ToString("N2")</td>
-    </tr>
-    <tr>
-        <th>@(isSw ? "Gharama ya Bidhaa Zilizorejeshwa" : "Cost of Returned Products")</th>
-        <td class="text-end">@Model.RefundCOGS.ToString("N2")</td>
-    </tr>
-    <tr>
-        <th>@(isSw ? "Jumla ya Gharama za Bidhaa" : "Total Product Cost")</th>
-        <td class="text-end">@Model.NetCOGS.ToString("N2")</td>
-    </tr>
+            <tr class="rpt-divider-row"><td colspan="2">@(isSw ? "Faida ya Mwanzo" : "Gross Profit")</td></tr>
+            <tr style="font-weight:600;">
+                <td>@Model.Labels.GrossProfit</td>
+                <td class="num @(Model.GrossProfit >= 0 ? "profit" : "loss")">@Model.GrossProfit.ToString("N2")</td>
+            </tr>
 
-    <tr>
-        <th>@Model.Labels.GrossProfit</th>
-        <td class="text-end">@Model.GrossProfit.ToString("N2")</td>
-    </tr>
-    <tr>
-        <th>@Model.Labels.TotalExpenses</th>
-        <td class="text-end">- @Model.TotalExpenses.ToString("N2")</td>
-    </tr>
-    <tr>
-        <th><b>@Model.Labels.NetProfit</b></th>
-        <td class="text-end"><b>@Model.NetProfit.ToString("N2")</b></td>
-    </tr>
-</table>
+            <tr class="rpt-divider-row"><td colspan="2">@(isSw ? "Gharama" : "Expenses")</td></tr>
+            <tr>
+                <td class="deduct">@Model.Labels.TotalExpenses</td>
+                <td class="num deduct">– @Model.TotalExpenses.ToString("N2")</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td>@Model.Labels.NetProfit</td>
+                <td class="num @(isProfit ? "profit" : "loss")">@Model.NetProfit.ToString("N2")</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
 
-<h4>@(isSw ? "Mgawanyo wa Gharama" : "Expenses Breakdown")</h4>
-
-@if (Model.ExpensesByType == null || Model.ExpensesByType.Count == 0)
+@* ── Expenses Breakdown ── *@
+@if (Model.ExpensesByType.Count > 0)
 {
-    <p>@Model.Labels.NoData</p>
+    <div class="rpt-card">
+        <div class="rpt-card-head">
+            <i class="bi bi-wallet2" style="color:#d97706;"></i>
+            @(isSw ? "Mgawanyo wa Gharama" : "Expenses Breakdown")
+        </div>
+        <table class="rpt-table">
+            <thead>
+                <tr>
+                    <th>@Model.Labels.ExpenseType</th>
+                    <th class="num">@Model.Labels.Amount</th>
+                    <th class="num">%</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.ExpensesByType)
+                {
+                    var pct = Model.TotalExpenses == 0 ? 0 : row.Amount / Model.TotalExpenses * 100;
+                    <tr>
+                        <td>@row.Type</td>
+                        <td class="num">@row.Amount.ToString("N2")</td>
+                        <td class="num" style="color:#6b7280;">@pct.ToString("N1")%</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>@(isSw ? "Jumla" : "Total")</td>
+                    <td class="num">@Model.TotalExpenses.ToString("N2")</td>
+                    <td class="num">100%</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>@Model.Labels.ExpenseType</th>
-                <th class="text-end">@Model.Labels.Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var row in Model.ExpensesByType)
-            {
-                <tr>
-                    <td>@row.Type</td>
-                    <td class="text-end">@row.Amount.ToString("N2")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="rpt-card" style="padding:28px;text-align:center;color:#9ca3af;">
+        <i class="bi bi-wallet2" style="font-size:28px;"></i>
+        <div class="mt-2">@Model.Labels.NoData</div>
+    </div>
 }

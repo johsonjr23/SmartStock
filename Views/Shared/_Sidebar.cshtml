@@ -39,6 +39,10 @@
 
     string Active(string c) =>
         ctrl.Equals(c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+
+    var isReports = ctrl.Equals("Reports", StringComparison.OrdinalIgnoreCase);
+    var rptOpen   = isReports ? "true" : "false";
+    var rptShow   = isReports ? "show" : "";
 }
 
 <aside id="sidebar">
@@ -112,12 +116,47 @@
             <div class="sb-divider"></div>
             <div class="sb-section-label">Management</div>
 
-            <a class="sb-link @Active("Reports")"
-               asp-controller="Reports" asp-action="Profit"
-               data-label="Reports">
-                <i class="bi bi-bar-chart-line sb-icon"></i>
-                <span class="sb-label">Reports</span>
-            </a>
+            @* ── Reports collapsible group ── *@
+            <div class="sb-group">
+                <button class="sb-link sb-group-toggle @(isReports ? "active" : "")"
+                        data-bs-toggle="collapse" data-bs-target="#rpt-sub"
+                        aria-expanded="@rptOpen"
+                        data-label="Reports"
+                        type="button">
+                    <i class="bi bi-bar-chart-line sb-icon"></i>
+                    <span class="sb-label">Reports</span>
+                    <i class="bi bi-chevron-down sb-caret sb-label ms-auto"></i>
+                </button>
+                <div class="collapse @rptShow" id="rpt-sub">
+                    <div class="sb-sub">
+                        <a class="sb-sub-link @(ctrl == "Reports" && action == "Profit" ? "active" : "")"
+                           asp-controller="Reports" asp-action="Profit">
+                            <i class="bi bi-receipt-cutoff"></i><span>Profit &amp; Loss</span>
+                        </a>
+                        <a class="sb-sub-link @(ctrl == "Reports" && action == "ProductMargin" ? "active" : "")"
+                           asp-controller="Reports" asp-action="ProductMargin">
+                            <i class="bi bi-graph-up"></i><span>Product Margin</span>
+                        </a>
+                        <a class="sb-sub-link @(ctrl == "Reports" && action == "InventoryValuation" ? "active" : "")"
+                           asp-controller="Reports" asp-action="InventoryValuation">
+                            <i class="bi bi-boxes"></i><span>Inventory Value</span>
+                        </a>
+                        <a class="sb-sub-link @(ctrl == "Reports" && action == "DailySales" ? "active" : "")"
+                           asp-controller="Reports" asp-action="DailySales">
+                            <i class="bi bi-calendar-check"></i><span>Daily Sales</span>
+                        </a>
+                        <a class="sb-sub-link @(ctrl == "Reports" && action == "LowStock" ? "active" : "")"
+                           asp-controller="Reports" asp-action="LowStock">
+                            <i class="bi bi-exclamation-triangle"></i><span>Low Stock</span>
+                        </a>
+                        <a class="sb-sub-link @(ctrl == "Reports" && action == "VoidRefundLog" ? "active" : "")"
+                           asp-controller="Reports" asp-action="VoidRefundLog">
+                            <i class="bi bi-arrow-counterclockwise"></i><span>Void &amp; Refunds</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <a class="sb-link @Active("Users")"
                asp-controller="Users" asp-action="Index"
                data-label="Users">

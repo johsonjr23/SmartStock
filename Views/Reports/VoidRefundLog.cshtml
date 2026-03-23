@@ -1,0 +1,172 @@
+@model SmartStock.ViewModels.Reports.VoidRefundLogViewModel
+@{
+    ViewData["Title"] = "Void & Refund Log";
+    var tz    = TimeZoneInfo.FindSystemTimeZoneById("E. Africa Standard Time");
+    var local = TimeZoneInfo.ConvertTime(Model.GeneratedAtUtc, tz);
+}
+
+<style>
+    .rpt-header { margin-bottom: 28px; }
+    .rpt-title  { font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 2px; }
+    .rpt-meta   { font-size: 13px; color: #6b7280; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .metric-card { background: #fff; border-radius: 12px; padding: 18px 20px; border: 1px solid #e5e7eb; }
+    .metric-card .mc-label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; }
+    .metric-card .mc-value { font-size: 22px; font-weight: 700; color: #111827; line-height: 1; }
+    .metric-card .mc-value.red    { color: #dc2626; }
+    .metric-card .mc-value.amber  { color: #d97706; }
+
+    .rpt-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 20px; }
+    .rpt-card-head { padding: 14px 20px; border-bottom: 1px solid #f3f4f6; font-weight: 600; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .rpt-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .rpt-table th { padding: 11px 16px; background: #f9fafb; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    .rpt-table td { padding: 11px 16px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+    .rpt-table tbody tr:last-child td { border-bottom: none; }
+    .rpt-table tfoot td { padding: 12px 16px; font-weight: 700; background: #f9fafb; border-top: 2px solid #e5e7eb; }
+    .rpt-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .badge-void    { display:inline-flex;align-items:center;gap:4px;background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600; }
+    .badge-refund  { display:inline-flex;align-items:center;gap:4px;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600; }
+    .inv-num { font-family:monospace;font-size:12px;background:#f3f4f6;padding:2px 7px;border-radius:4px;color:#374151; }
+    .reason-text { font-size:12px;color:#6b7280;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+
+    @@media print {
+        #sidebar, nav.sb-nav, .rpt-no-print { display: none !important; }
+        #main-content, body { margin: 0 !important; padding: 0 !important; }
+        .rpt-card { border: 1px solid #ccc; }
+        @@page { margin: 15mm; }
+    }
+</style>
+
+<div class="rpt-header d-flex flex-wrap align-items-start justify-content-between gap-3">
+    <div>
+        <div class="rpt-title">
+            <i class="bi bi-arrow-counterclockwise me-2" style="color:#dc2626;"></i>Void &amp; Refund Log
+        </div>
+        <div class="rpt-meta">
+            @Model.TenantName &mdash; @Model.From.ToString("MMM d, yyyy") to @Model.To.ToString("MMM d, yyyy")
+            &mdash; Generated @local.ToString("MMM d, yyyy HH:mm")
+        </div>
+    </div>
+    <div class="d-flex gap-2 rpt-no-print">
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print / PDF
+        </button>
+    </div>
+</div>
+
+<form method="get" class="rpt-card rpt-no-print mb-4" style="padding:16px 20px;">
+    <div class="row g-3 align-items-end">
+        <div class="col-sm-auto">
+            <label class="form-label mb-1" style="font-size:12px;font-weight:600;">From</label>
+            <input type="date" class="form-control form-control-sm" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-sm-auto">
+            <label class="form-label mb-1" style="font-size:12px;font-weight:600;">To</label>
+            <input type="date" class="form-control form-control-sm" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-sm-auto">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="bi bi-funnel me-1"></i>Apply
+            </button>
+        </div>
+    </div>
+</form>
+
+<div class="metric-grid">
+    <div class="metric-card">
+        <div class="mc-label">Voided Sales</div>
+        <div class="mc-value red">@Model.VoidCount</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Refunds</div>
+        <div class="mc-value amber">@Model.RefundCount</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Voided Amount</div>
+        <div class="mc-value red">@Model.TotalVoidedAmount.ToString("N2")</div>
+    </div>
+    <div class="metric-card">
+        <div class="mc-label">Refunded Amount</div>
+        <div class="mc-value amber">@Model.TotalRefundedAmount.ToString("N2")</div>
+    </div>
+</div>
+
+<div class="rpt-card">
+    <div class="rpt-card-head">
+        <i class="bi bi-list-ul" style="color:#dc2626;"></i>
+        Transaction Log
+    </div>
+    @if (Model.Rows.Count == 0)
+    {
+        <div style="padding:40px;text-align:center;color:#9ca3af;">
+            <i class="bi bi-check-circle" style="font-size:30px;color:#10b981;"></i>
+            <div class="mt-2">No voids or refunds in this period.</div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="rpt-table">
+                <thead>
+                    <tr>
+                        <th style="width:160px;">Date &amp; Time</th>
+                        <th style="width:140px;">Invoice #</th>
+                        <th style="width:110px;">Type</th>
+                        <th class="num" style="width:160px;">Amount</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td style="color:#6b7280;">@row.EventDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(row.InvoiceNumber))
+                                {
+                                    <span class="inv-num">@row.InvoiceNumber</span>
+                                }
+                                else
+                                {
+                                    <span style="color:#9ca3af;">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (row.Type == "Voided")
+                                {
+                                    <span class="badge-void"><i class="bi bi-slash-circle"></i>Voided</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-refund"><i class="bi bi-arrow-return-left"></i>Refund</span>
+                                }
+                            </td>
+                            <td class="num" style="font-weight:600;@(row.Type == "Voided" ? "color:#dc2626;" : "color:#d97706;")">
+                                @row.Amount.ToString("N2")
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(row.Reason))
+                                {
+                                    <span class="reason-text" title="@row.Reason">@row.Reason</span>
+                                }
+                                else
+                                {
+                                    <span style="color:#9ca3af;font-size:12px;">No reason provided</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3">Total (@Model.Rows.Count transactions)</td>
+                        <td class="num" style="color:#dc2626;">@((Model.TotalVoidedAmount + Model.TotalRefundedAmount).ToString("N2"))</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+</div>

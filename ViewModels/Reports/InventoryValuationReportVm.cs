@@ -47,6 +47,7 @@ namespace SmartStock.ViewModels.Reports
         public string? Query { get; set; }
         public string? Lang { get; set; }
 
+        public string TenantName { get; set; } = "";
         public DateTimeOffset GeneratedAtUtc { get; set; }
 
         public List<InventoryValuationRowVm> Items { get; set; } = new();

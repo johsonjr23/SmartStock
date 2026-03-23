@@ -9,6 +9,7 @@ namespace SmartStock.ViewModels
         public DateTime From { get; set; }
         public DateTime To { get; set; }
 
+        public string TenantName { get; set; } = "";
         public string Lang { get; set; } = "en";
         public ReportLabels Labels { get; set; } = new();
 
