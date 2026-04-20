@@ -1,0 +1,31 @@
+@{
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+    ViewData["Title"] = "Account Suspended";
+}
+
+<div class="auth-page" style="align-items:center;justify-content:center;">
+    <div class="auth-panel" style="max-width:460px;text-align:center;">
+
+        <div style="width:72px;height:72px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;color:#dc2626;">
+            <i class="bi bi-slash-circle-fill"></i>
+        </div>
+
+        <h1 class="auth-heading" style="font-size:22px;">Account Suspended</h1>
+        <p class="auth-subheading" style="margin-bottom:24px;">
+            Your business account has been suspended and you no longer have access to the system.
+        </p>
+
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px 20px;text-align:left;margin-bottom:28px;">
+            <div style="font-size:13px;font-weight:600;color:#dc2626;margin-bottom:6px;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> What to do?
+            </div>
+            <p style="font-size:13px;color:#374151;margin:0;line-height:1.7;">
+                Contact your system administrator to resolve this. If you believe this is an error, please reach out for support.
+            </p>
+        </div>
+
+        <a asp-action="Login" class="auth-btn" style="display:block;text-decoration:none;text-align:center;background:#dc2626;">
+            <i class="bi bi-arrow-left me-2"></i>Back to Sign In
+        </a>
+    </div>
+</div>

@@ -1,0 +1,109 @@
+@model SmartStock.ViewModels.RequestShopViewModel
+@{
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+    ViewData["Title"] = "Request Access";
+}
+
+<div class="auth-page">
+
+    @* ── Left: brand panel ── *@
+    <div class="auth-bg">
+        <div class="auth-bg-content">
+            <div class="auth-bg-logo">S</div>
+            <div class="auth-bg-title">Get Started with SmartStock</div>
+            <div class="auth-bg-desc">
+                Submit your business details and our team will set up your account within 24 hours.
+            </div>
+            <div class="auth-feature-list">
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-clock-fill"></i></div>
+                    <span>Quick setup — usually within 24 hours</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span>Secure, isolated business data</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-headset"></i></div>
+                    <span>Dedicated onboarding support</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <span>Full POS, inventory &amp; reporting</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Right: form panel ── *@
+    <div class="auth-panel" style="max-width:520px;">
+
+        <div class="auth-logo">
+            <div class="auth-logo-mark">S</div>
+            <span class="auth-logo-name">SmartStock</span>
+        </div>
+
+        <h1 class="auth-heading">Request Shop Access</h1>
+        <p class="auth-subheading">Fill in your details and we'll review your application</p>
+
+        <div asp-validation-summary="All" class="alert alert-danger d-flex align-items-center gap-2 mb-3"></div>
+
+        <form asp-action="RequestShop" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <label class="form-label" asp-for="ShopName">Business / Shop Name <span class="text-danger">*</span></label>
+                    <input asp-for="ShopName" class="auth-input" placeholder="e.g. Mama Pima General Store" autofocus />
+                    <span asp-validation-for="ShopName" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" asp-for="OwnerName">Your Full Name <span class="text-danger">*</span></label>
+                    <input asp-for="OwnerName" class="auth-input" placeholder="e.g. John Mwangi" />
+                    <span asp-validation-for="OwnerName" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label" asp-for="Email">Email Address <span class="text-danger">*</span></label>
+                    <input asp-for="Email" class="auth-input" type="email" placeholder="you@example.com" />
+                    <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label" asp-for="Phone">Phone Number <span class="text-danger">*</span></label>
+                    <input asp-for="Phone" class="auth-input" placeholder="e.g. +255 712 345 678" />
+                    <span asp-validation-for="Phone" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" asp-for="BusinessType">Business Type <span style="color:var(--ss-text-muted);font-weight:400;">(optional)</span></label>
+                    <select asp-for="BusinessType" class="auth-input" style="appearance:auto;">
+                        <option value="">— Select type —</option>
+                        <option>Retail Shop</option>
+                        <option>Wholesale</option>
+                        <option>Restaurant / Café</option>
+                        <option>Pharmacy</option>
+                        <option>Electronics</option>
+                        <option>Clothing &amp; Fashion</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" asp-for="Message">Additional Message <span style="color:var(--ss-text-muted);font-weight:400;">(optional)</span></label>
+                    <textarea asp-for="Message" class="auth-input" rows="3"
+                              placeholder="Any details about your business or specific needs..."></textarea>
+                    <span asp-validation-for="Message" class="text-danger small mt-1 d-block"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="auth-btn">
+                <i class="bi bi-send me-2"></i>Submit Request
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a asp-action="Login">Sign in &rarr;</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

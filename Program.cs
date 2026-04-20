@@ -2,11 +2,15 @@
 using Microsoft.EntityFrameworkCore;
 using SmartStock.Data;
 using SmartStock.Models;
+using SmartStock.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ================= MVC =================
 builder.Services.AddControllersWithViews();
+
+// ================= EMAIL SERVICE =================
+builder.Services.AddTransient<IEmailService, EmailService>();
 
 // ================= DOMAIN DB CONTEXT =================
 builder.Services.AddDbContext<SmartStockDbContext>(options =>

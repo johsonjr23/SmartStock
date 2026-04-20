@@ -1,0 +1,111 @@
+@model List<SmartStock.Models.TenantRequest>
+@{
+    ViewData["Title"] = "Shop Requests";
+    var statusFilter = ViewBag.StatusFilter as string ?? "All";
+    int pendingCount = ViewBag.PendingCount ?? 0;
+}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h1 style="font-size:22px;font-weight:700;color:#1f2937;margin:0;">Shop Requests</h1>
+        <p style="font-size:13px;color:#6b7280;margin:4px 0 0;">Review and approve new business access requests</p>
+    </div>
+    @if (pendingCount > 0)
+    {
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;color:#92400e;">
+            <i class="bi bi-clock-history me-1"></i> @pendingCount pending request@(pendingCount != 1 ? "s" : "") awaiting review
+        </div>
+    }
+</div>
+
+@* Status filter tabs *@
+<div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;">
+    @foreach (var tab in new[] { "All", "Pending", "Approved", "Rejected" })
+    {
+        var isActive = statusFilter == tab;
+        <a asp-action="Index" asp-route-status="@(tab == "All" ? null : tab)"
+           style="padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid @(isActive ? "var(--sa-accent)" : "rgba(255,255,255,0.1)");background:@(isActive ? "var(--sa-accent)" : "rgba(255,255,255,0.05)");color:@(isActive ? "#fff" : "#9a7a80");transition:all 0.15s ease;">
+            @tab
+            @if (tab == "Pending" && pendingCount > 0)
+            {
+                <span style="margin-left:6px;background:@(isActive ? "rgba(255,255,255,0.3)" : "var(--sa-accent)");color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;">@pendingCount</span>
+            }
+        </a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:48px;text-align:center;">
+        <i class="bi bi-inbox" style="font-size:40px;color:#d1d5db;display:block;margin-bottom:12px;"></i>
+        <div style="font-size:15px;font-weight:600;color:#374151;margin-bottom:6px;">No requests found</div>
+        <div style="font-size:13px;color:#6b7280;">
+            @if (statusFilter == "All") { <text>No shop requests have been submitted yet.</text> }
+            else { <text>No <strong>@statusFilter.ToLower()</strong> requests at this time.</text> }
+        </div>
+    </div>
+}
+else
+{
+    <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+            <thead>
+                <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                    <th style="padding:11px 16px;text-align:left;font-weight:600;color:#374151;">Business</th>
+                    <th style="padding:11px 16px;text-align:left;font-weight:600;color:#374151;">Contact</th>
+                    <th style="padding:11px 16px;text-align:left;font-weight:600;color:#374151;">Phone</th>
+                    <th style="padding:11px 16px;text-align:left;font-weight:600;color:#374151;">Status</th>
+                    <th style="padding:11px 16px;text-align:left;font-weight:600;color:#374151;">Submitted</th>
+                    <th style="padding:11px 16px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr style="border-bottom:1px solid #f3f4f6;transition:background 0.12s;" onmouseover="this.style.background='#fdf4f5'" onmouseout="this.style.background=''">
+                        <td style="padding:13px 16px;">
+                            <div style="font-weight:600;color:#1f2937;">@r.ShopName</div>
+                            @if (!string.IsNullOrEmpty(r.BusinessType))
+                            {
+                                <div style="font-size:12px;color:#6b7280;">@r.BusinessType</div>
+                            }
+                        </td>
+                        <td style="padding:13px 16px;">
+                            <div style="color:#374151;">@r.OwnerName</div>
+                            <div style="font-size:12px;color:#6b7280;">@r.Email</div>
+                        </td>
+                        <td style="padding:13px 16px;color:#6b7280;">@(r.Phone ?? "—")</td>
+                        <td style="padding:13px 16px;">
+                            @if (r.Status == "Pending")
+                            {
+                                <span style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;">
+                                    <i class="bi bi-clock me-1"></i>Pending
+                                </span>
+                            }
+                            else if (r.Status == "Approved")
+                            {
+                                <span style="background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;">
+                                    <i class="bi bi-check-circle me-1"></i>Approved
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;">
+                                    <i class="bi bi-x-circle me-1"></i>Rejected
+                                </span>
+                            }
+                        </td>
+                        <td style="padding:13px 16px;color:#6b7280;font-size:12.5px;">@r.CreatedAt.ToString("MMM d, yyyy")</td>
+                        <td style="padding:13px 16px;text-align:right;">
+                            <a asp-action="Details" asp-route-id="@r.Id"
+                               style="background:#f43f5e;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:12.5px;font-weight:600;text-decoration:none;display:inline-block;transition:opacity 0.15s;"
+                               onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                                Review <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

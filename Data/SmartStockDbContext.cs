@@ -33,6 +33,7 @@ public partial class SmartStockDbContext : DbContext
     public DbSet<Expense> Expenses { get; set; }
 
     public DbSet<StockTransaction> StockTransactions { get; set; }
+    public DbSet<TenantRequest> TenantRequests { get; set; }
 
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -240,6 +241,19 @@ public partial class SmartStockDbContext : DbContext
             entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
             entity.HasIndex(e => new { e.TenantId, e.ExpenseDate });
+        });
+
+        modelBuilder.Entity<TenantRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ShopName).HasMaxLength(200);
+            entity.Property(e => e.OwnerName).HasMaxLength(200);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.BusinessType).HasMaxLength(100);
+            entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Pending");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
+            entity.HasIndex(e => e.Status);
         });
 
 

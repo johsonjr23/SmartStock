@@ -1,0 +1,143 @@
+@model SmartStock.ViewModels.VerifyCodeViewModel
+@{
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+    ViewData["Title"] = "Verify Code";
+}
+
+<div class="auth-page" style="align-items:center;justify-content:center;">
+    <div class="auth-panel" style="max-width:420px;text-align:center;">
+
+        @* Icon *@
+        <div style="width:64px;height:64px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;">
+            🔐
+        </div>
+
+        <div class="auth-logo" style="justify-content:center;margin-bottom:16px;">
+            <div class="auth-logo-mark">S</div>
+            <span class="auth-logo-name">SmartStock</span>
+        </div>
+
+        <h1 class="auth-heading" style="font-size:20px;">Check your email</h1>
+        <p class="auth-subheading" style="margin-bottom:28px;">
+            We sent a 6-digit code to<br/>
+            <strong style="color:var(--ss-text);">@ViewBag.MaskedEmail</strong>
+        </p>
+
+        @* Resend feedback *@
+        @if (TempData["ResendSuccess"] != null)
+        {
+            <div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:13px;color:#166534;margin-bottom:16px;">
+                <i class="bi bi-check-circle me-1"></i> @TempData["ResendSuccess"]
+            </div>
+        }
+        @if (TempData["ResendError"] != null)
+        {
+            <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:16px;">
+                <i class="bi bi-exclamation-triangle me-1"></i> @TempData["ResendError"]
+            </div>
+        }
+
+        @* Validation errors *@
+        <div asp-validation-summary="ModelOnly"
+             style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:16px;text-align:left;">
+        </div>
+
+        <form asp-action="VerifyCode" method="post" id="otp-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="RememberMe" />
+
+            @* 6-box OTP input *@
+            <div id="otp-boxes" style="display:flex;gap:10px;justify-content:center;margin-bottom:28px;">
+                @for (int i = 0; i < 6; i++)
+                {
+                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                           class="otp-box"
+                           style="width:52px;height:60px;text-align:center;font-size:26px;font-weight:700;border:2px solid var(--ss-border);border-radius:12px;outline:none;color:var(--ss-text);background:var(--ss-surface);transition:border-color 0.15s ease;"
+                           autocomplete="off" />
+                }
+            </div>
+
+            @* Hidden field that collects the full code before submit *@
+            <input type="hidden" asp-for="Code" id="code-hidden" />
+
+            <button type="submit" class="auth-btn" id="submit-btn">
+                <i class="bi bi-shield-check me-2"></i>Verify &amp; Sign In
+            </button>
+        </form>
+
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+            @* Resend code *@
+            <form asp-action="ResendCode" method="post" style="margin:0;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="rememberMe" value="@Model.RememberMe" />
+                <button type="submit"
+                        style="background:none;border:none;color:var(--ss-primary);font-size:13.5px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;">
+                    Didn't receive it? Resend code
+                </button>
+            </form>
+
+            <a asp-action="Login"
+               style="font-size:13px;color:var(--ss-text-muted);text-decoration:none;">
+                <i class="bi bi-arrow-left me-1"></i>Back to sign in
+            </a>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var boxes  = Array.from(document.querySelectorAll('.otp-box'));
+    var hidden = document.getElementById('code-hidden');
+    var form   = document.getElementById('otp-form');
+
+    // Focus first box on load
+    if (boxes[0]) boxes[0].focus();
+
+    boxes.forEach(function (box, idx) {
+        // Style focus
+        box.addEventListener('focus', function () { this.style.borderColor = 'var(--ss-primary)'; this.style.boxShadow = '0 0 0 3px rgba(46,125,233,0.15)'; });
+        box.addEventListener('blur',  function () { this.style.borderColor = 'var(--ss-border)'; this.style.boxShadow = 'none'; });
+
+        box.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace') {
+                if (this.value) { this.value = ''; } else if (idx > 0) { boxes[idx - 1].focus(); }
+                e.preventDefault();
+                updateHidden();
+            }
+            // Allow only digit keys and control keys
+            if (!/^[0-9]$/.test(e.key) && !['ArrowLeft','ArrowRight','Tab','Delete'].includes(e.key)) {
+                if (!e.ctrlKey && !e.metaKey) e.preventDefault();
+            }
+        });
+
+        box.addEventListener('input', function () {
+            var val = this.value.replace(/\D/g, '').slice(-1);
+            this.value = val;
+            if (val && idx < 5) boxes[idx + 1].focus();
+            updateHidden();
+            if (getCode().length === 6) form.submit();
+        });
+
+        // Handle paste of full code
+        box.addEventListener('paste', function (e) {
+            e.preventDefault();
+            var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+            pasted.split('').slice(0, 6).forEach(function (ch, i) {
+                if (boxes[i]) boxes[i].value = ch;
+            });
+            updateHidden();
+            var next = Math.min(pasted.length, 5);
+            boxes[next].focus();
+            if (pasted.length === 6) form.submit();
+        });
+    });
+
+    function getCode() { return boxes.map(function (b) { return b.value; }).join(''); }
+    function updateHidden() { hidden.value = getCode(); }
+
+    form.addEventListener('submit', function () { updateHidden(); });
+})();
+</script>
+}

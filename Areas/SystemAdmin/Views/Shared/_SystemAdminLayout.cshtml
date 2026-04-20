@@ -1,7 +1,10 @@
+@using SmartStock.Data
+@inject SmartStockDbContext _saDb
 @{
     Layout = null;
     var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     string SA(string c) => ctrl.Equals(c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    int _pendingRequests = _saDb.TenantRequests.Count(r => r.Status == "Pending");
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -335,6 +338,18 @@
                data-label="Tenants">
                 <i class="bi bi-building sa-icon"></i>
                 <span class="sa-label">Tenants</span>
+            </a>
+
+            <a class="sa-link @SA("Requests")"
+               asp-area="SystemAdmin" asp-controller="Requests" asp-action="Index"
+               data-label="Requests"
+               style="position:relative;">
+                <i class="bi bi-inbox sa-icon"></i>
+                <span class="sa-label">Requests</span>
+                @if (_pendingRequests > 0)
+                {
+                    <span style="margin-left:auto;background:var(--sa-accent);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;flex-shrink:0;">@_pendingRequests</span>
+                }
             </a>
         </nav>
 
