@@ -1,41 +1,91 @@
-﻿@model SmartStock.ViewModels.RegisterViewModel
-
+@model SmartStock.ViewModels.RegisterViewModel
 @{
-    ViewData["Title"] = "Register";
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+    ViewData["Title"] = "Create Shop";
 }
 
-<h2>Create Your Shop</h2>
+<div class="auth-page">
 
-<form asp-action="Register" method="post" novalidate>
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-    <div>
-        <label asp-for="ShopName"></label>
-        <input asp-for="ShopName" class="form-control" />
-        <span asp-validation-for="ShopName" class="text-danger"></span>
+    @* ── Left: brand panel ── *@
+    <div class="auth-bg">
+        <div class="auth-bg-content">
+            <div class="auth-bg-logo">S</div>
+            <div class="auth-bg-title">Start Selling Smarter</div>
+            <div class="auth-bg-desc">
+                Set up your shop in seconds. Manage inventory, process sales, and track profits — all in one place.
+            </div>
+            <div class="auth-feature-list">
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-shop"></i></div>
+                    <span>Your own tenant-isolated shop</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-shield-check"></i></div>
+                    <span>Secure, role-based access control</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <span>Built-in P&amp;L and margin reports</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-receipt-cutoff"></i></div>
+                    <span>Printable receipts with void &amp; refund</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div>
-        <label asp-for="Email"></label>
-        <input asp-for="Email" class="form-control" />
-        <span asp-validation-for="Email" class="text-danger"></span>
-    </div>
+    @* ── Right: form panel ── *@
+    <div class="auth-panel">
 
-    <div>
-        <label asp-for="Password"></label>
-        <input asp-for="Password" class="form-control" />
-        <span asp-validation-for="Password" class="text-danger"></span>
-    </div>
+        <div class="auth-logo">
+            <div class="auth-logo-mark">S</div>
+            <span class="auth-logo-name">SmartStock</span>
+        </div>
 
-    <div>
-        <label asp-for="ConfirmPassword"></label>
-        <input asp-for="ConfirmPassword" class="form-control" />
-        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
-    </div>
+        <h1 class="auth-heading">Create your shop</h1>
+        <p class="auth-subheading">Get started for free — no credit card required</p>
 
-    <button type="submit">Register</button>
-</form>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger d-flex gap-2" style="display:none!important;"></div>
+
+        <form asp-action="Register" method="post" novalidate>
+
+            <div class="auth-form-group">
+                <label class="form-label" asp-for="ShopName">Business / Shop Name</label>
+                <input asp-for="ShopName" class="auth-input" placeholder="e.g. Amani General Store" autofocus />
+                <span asp-validation-for="ShopName" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <div class="auth-form-group">
+                <label class="form-label" asp-for="Email">Email address</label>
+                <input asp-for="Email" class="auth-input" type="email" placeholder="you@example.com" autocomplete="email" />
+                <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="auth-form-group">
+                    <label class="form-label" asp-for="Password">Password</label>
+                    <input asp-for="Password" class="auth-input" type="password" placeholder="••••••••" autocomplete="new-password" />
+                    <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="auth-form-group">
+                    <label class="form-label" asp-for="ConfirmPassword">Confirm Password</label>
+                    <input asp-for="ConfirmPassword" class="auth-input" type="password" placeholder="••••••••" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small mt-1 d-block"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="auth-btn">
+                <i class="bi bi-shop me-2"></i>Create My Shop
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a asp-action="Login">Sign in &rarr;</a>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

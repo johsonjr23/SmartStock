@@ -1,35 +1,87 @@
-﻿@model SmartStock.ViewModels.LoginViewModel
-
+@model SmartStock.ViewModels.LoginViewModel
 @{
-    ViewData["Title"] = "Login";
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+    ViewData["Title"] = "Sign In";
 }
 
-<h2>Login</h2>
+<div class="auth-page">
 
-<form asp-action="Login" method="post">
-    @Html.AntiForgeryToken()
-
-    <div>
-        <label>Email</label>
-        <input asp-for="Email" />
-        <span asp-validation-for="Email"></span>
+    @* ── Left: brand panel ── *@
+    <div class="auth-bg">
+        <div class="auth-bg-content">
+            <div class="auth-bg-logo">S</div>
+            <div class="auth-bg-title">SmartStock POS</div>
+            <div class="auth-bg-desc">
+                The all-in-one inventory and point-of-sale platform for modern businesses.
+            </div>
+            <div class="auth-feature-list">
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+                    <span>Fast, touch-friendly POS checkout</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-boxes"></i></div>
+                    <span>Real-time inventory tracking</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-bar-chart-line-fill"></i></div>
+                    <span>Profit, stock &amp; sales reports</span>
+                </div>
+                <div class="auth-feature-item">
+                    <div class="auth-feature-icon"><i class="bi bi-people-fill"></i></div>
+                    <span>Multi-user with role control</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div>
-        <label>Password</label>
-        <input asp-for="Password" type="password" />
-        <span asp-validation-for="Password"></span>
+    @* ── Right: form panel ── *@
+    <div class="auth-panel">
+
+        <div class="auth-logo">
+            <div class="auth-logo-mark">S</div>
+            <span class="auth-logo-name">SmartStock</span>
+        </div>
+
+        <h1 class="auth-heading">Welcome back</h1>
+        <p class="auth-subheading">Sign in to your account to continue</p>
+
+        <div asp-validation-summary="All" class="alert alert-danger d-flex align-items-center gap-2" style="display:none!important;"></div>
+
+        <form asp-action="Login" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="auth-form-group">
+                <label class="form-label" for="Email">Email address</label>
+                <input asp-for="Email" id="Email" class="auth-input" type="email"
+                       placeholder="you@example.com" autocomplete="email" autofocus />
+                <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <div class="auth-form-group">
+                <label class="form-label" for="Password">Password</label>
+                <input asp-for="Password" id="Password" class="auth-input" type="password"
+                       placeholder="••••••••" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 mb-4" style="font-size:13.5px;">
+                <input asp-for="RememberMe" id="RememberMe" type="checkbox"
+                       style="width:16px;height:16px;accent-color:var(--ss-primary);cursor:pointer;" />
+                <label for="RememberMe" style="cursor:pointer;color:var(--ss-text-2);margin:0;">Keep me signed in</label>
+            </div>
+
+            <button type="submit" class="auth-btn">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Don't have an account? <a asp-action="Register">Create your shop &rarr;</a>
+        </div>
     </div>
+</div>
 
-    <div>
-        <input asp-for="RememberMe" />
-        <label asp-for="RememberMe">Remember me</label>
-    </div>
-
-    <button type="submit">Login</button>
-</form>
-
-<p>
-    Don’t have an account?
-    <a asp-action="Register">Register</a>
-</p>
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

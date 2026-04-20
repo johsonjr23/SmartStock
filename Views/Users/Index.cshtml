@@ -4,116 +4,125 @@
     var userRoles = ViewBag.UserRoles as Dictionary<string, string> ?? new();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="mb-0 fw-bold">Users</h4>
-        <small class="text-muted">Manage your team members</small>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Team Members</h1>
+        <p class="page-subtitle">Manage staff accounts and their access roles</p>
     </div>
-    <a asp-controller="Users" asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-person-plus me-1"></i> Add User
-    </a>
+    <div class="page-header-actions">
+        <a asp-controller="Users" asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add Member
+        </a>
+    </div>
 </div>
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 @if (!Model.Any())
 {
-    <div class="alert alert-info">No team members yet. Add your first user above.</div>
+    <div class="ss-card">
+        <div class="ss-empty">
+            <i class="bi bi-people ss-empty-icon"></i>
+            <div class="ss-empty-title">No team members yet</div>
+            <div class="ss-empty-text">Add cashiers and managers to give them access to the system.</div>
+            <a asp-action="Create" class="btn btn-primary mt-3">
+                <i class="bi bi-person-plus me-1"></i> Add First Member
+            </a>
+        </div>
+    </div>
 }
 else
 {
-    <div class="card shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var u in Model)
-                    {
-                        var role = userRoles.GetValueOrDefault(u.Id, "-");
-                        var isLocked = u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow;
-
+    <div class="ss-card">
+        <div class="ss-card-body-flush">
+            <div class="ss-table-wrap">
+                <table class="ss-table">
+                    <thead>
                         <tr>
-                            <td class="fw-semibold">@(u.FullName ?? "-")</td>
-                            <td>@u.Email</td>
-                            <td>
-                                @if (role == "TenantAdmin")
-                                {
-                                    <span class="badge bg-primary">Admin</span>
-                                }
-                                else if (role == "Manager")
-                                {
-                                    <span class="badge bg-info text-dark">Manager</span>
-                                }
-                                else if (role == "Cashier")
-                                {
-                                    <span class="badge bg-secondary">Cashier</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-light text-dark">@role</span>
-                                }
-                            </td>
-                            <td>
-                                @if (isLocked)
-                                {
-                                    <span class="badge bg-danger">Disabled</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                            </td>
-                            <td>
-                                @if (role != "TenantAdmin")
-                                {
-                                    @if (isLocked)
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model)
+                        {
+                            var role = userRoles.GetValueOrDefault(u.Id, "-");
+                            var isLocked = u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow;
+
+                            <tr>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <div style="width:34px;height:34px;border-radius:50%;background:var(--ss-primary-light);color:var(--ss-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;text-transform:uppercase;">
+                                            @((u.FullName ?? u.Email ?? "?").Substring(0, 1))
+                                        </div>
+                                        <span class="td-name">@(u.FullName ?? "—")</span>
+                                    </div>
+                                </td>
+                                <td style="font-size:13px;color:var(--ss-text-muted);">@u.Email</td>
+                                <td>
+                                    @if (role == "TenantAdmin")
                                     {
-                                        <form asp-controller="Users" asp-action="Enable"
-                                              asp-route-id="@u.Id" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-success">
-                                                <i class="bi bi-play-circle"></i> Enable
-                                            </button>
-                                        </form>
+                                        <span class="ss-badge ss-badge-primary"><i class="bi bi-shield-check"></i> Admin</span>
+                                    }
+                                    else if (role == "Manager")
+                                    {
+                                        <span class="ss-badge ss-badge-info"><i class="bi bi-person-gear"></i> Manager</span>
+                                    }
+                                    else if (role == "Cashier")
+                                    {
+                                        <span class="ss-badge ss-badge-neutral"><i class="bi bi-person"></i> Cashier</span>
                                     }
                                     else
                                     {
-                                        <form asp-controller="Users" asp-action="Disable"
-                                              asp-route-id="@u.Id" method="post" class="d-inline"
-                                              onsubmit="return confirm('Disable this user?')">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-warning">
-                                                <i class="bi bi-pause-circle"></i> Disable
-                                            </button>
-                                        </form>
+                                        <span class="ss-badge ss-badge-neutral">@role</span>
                                     }
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                                </td>
+                                <td>
+                                    @if (isLocked)
+                                    {
+                                        <span class="ss-badge ss-badge-danger"><i class="bi bi-lock"></i> Disabled</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ss-badge ss-badge-success"><i class="bi bi-check-circle"></i> Active</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (role != "TenantAdmin")
+                                    {
+                                        @if (isLocked)
+                                        {
+                                            <form asp-controller="Users" asp-action="Enable"
+                                                  asp-route-id="@u.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                                    <i class="bi bi-play-circle me-1"></i> Enable
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form asp-controller="Users" asp-action="Disable"
+                                                  asp-route-id="@u.Id" method="post" class="d-inline"
+                                                  onsubmit="return confirm('Disable @(u.FullName ?? u.Email)?')">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                    <i class="bi bi-pause-circle me-1"></i> Disable
+                                                </button>
+                                            </form>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span style="font-size:12px;color:var(--ss-text-dim);">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 }

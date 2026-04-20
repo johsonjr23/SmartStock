@@ -12,7 +12,7 @@ using SmartStock.Data;
 namespace SmartStock.Migrations
 {
     [DbContext(typeof(SmartStockDbContext))]
-    [Migration("20260323123728_InitialCreate")]
+    [Migration("20260420134407_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

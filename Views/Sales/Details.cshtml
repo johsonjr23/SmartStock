@@ -3,62 +3,42 @@
     ViewData["Title"] = "Sale Receipt";
 }
 <style>
-    .receipt-wrap {
-        max-width: 720px;
-        margin: 0 auto;
-    }
+    .receipt-wrap { max-width: 700px; margin: 0 auto; }
+    .muted { opacity: 0.72; }
+    .mono { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Courier New",monospace; }
 
-    .muted {
-        opacity: 0.75;
-    }
-
-    .mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-
-    /* PRINT: make it look like a POS receipt */
     @@media print {
-        header, nav, footer, .navbar, .footer, .no-print {
-            display: none !important;
-        }
-
-        body {
-            background: #fff !important;
-        }
-        /* Thermal-style width */
-        .receipt-wrap {
-            max-width: 80mm !important;
-            margin: 0 !important;
-        }
-        /* Remove card shadows/borders */
-        .card, .shadow, .shadow-sm {
-            box-shadow: none !important;
-            border: none !important;
-        }
-
-        a[href]:after {
-            content: "" !important;
-        }
+        #sidebar, #main-wrap > header, .ss-topbar, .no-print { display: none !important; }
+        #main-wrap { margin-left: 0 !important; }
+        body { background: #fff !important; }
+        .receipt-wrap { max-width: 80mm !important; margin: 0 !important; }
+        .card, .shadow, .shadow-sm { box-shadow: none !important; border: none !important; }
+        a[href]:after { content: "" !important; }
     }
-
-    @@page {
-        size: 80mm auto;
-        margin: 6mm;
-    }
+    @@page { size: 80mm auto; margin: 6mm; }
 </style>
+
+<div class="ss-breadcrumb no-print">
+    <a asp-action="Index">Sales</a>
+    <span class="sep"><i class="bi bi-chevron-right"></i></span>
+    <span class="current">Receipt</span>
+</div>
 
 <div class="receipt-wrap">
 
     <!-- Top buttons (no-print) -->
     <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-        <div>
-            <a asp-action="Index" asp-controller="Sales" class="btn btn-outline-secondary btn-sm">Sales</a>
-            <a asp-action="New" asp-controller="Sales" class="btn btn-outline-primary btn-sm">New Sale</a>
+        <div class="d-flex gap-2">
+            <a asp-action="Index" asp-controller="Sales" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Sales
+            </a>
+            <a asp-action="New" asp-controller="Sales" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-plus-circle me-1"></i> New Sale
+            </a>
         </div>
-
-        <div class="d-flex gap-2 align-items-center">
-            <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">Print</button>
-        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Print Receipt
+        </button>
     </div>
 
     <!-- Actions (no-print): only show for Completed sales -->

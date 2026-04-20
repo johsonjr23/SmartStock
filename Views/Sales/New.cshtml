@@ -1,319 +1,312 @@
-﻿@model SmartStock.ViewModels.CreateSaleViewModel
+@model SmartStock.ViewModels.CreateSaleViewModel
 
 @{
     ViewData["Title"] = "New Sale";
 }
 
-<h2>New Sale</h2>
-
-@* ===== FEEDBACK MESSAGES ===== *@
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["Success"]
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">New Sale</h1>
+        <p class="page-subtitle">Add products and complete checkout</p>
     </div>
-}
+    <div class="page-header-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-list-ul"></i> All Sales
+        </a>
+    </div>
+</div>
 
-<div asp-validation-summary="All" class="alert alert-danger"></div>
+<div asp-validation-summary="All" class="alert alert-danger mb-3"></div>
 
+<form asp-action="New" method="post" id="pos-form">
 
-<form asp-action="New" method="post">
+<div class="pos-wrap">
 
-    <!-- =====================
-         SALE HEADER
-    ====================== -->
-    <div class="row mb-3">
-        <div class="col-md-3">
-            <label asp-for="SaleDate" class="form-label"></label>
-            <input asp-for="SaleDate" class="form-control" />
+    @* ══════════════ LEFT PANEL ══════════════ *@
+    <div class="pos-left">
+
+        @* Search card *@
+        <div class="pos-search-card">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ss-text-muted);margin-bottom:12px;">
+                <i class="bi bi-search me-1"></i> Search Product
+            </div>
+            <div class="pos-search-wrap">
+                <i class="bi bi-upc-scan pos-search-icon"></i>
+                <input asp-for="ProductSearch"
+                       id="productSearch"
+                       class="pos-search-input"
+                       placeholder="Type product name or scan barcode..."
+                       autocomplete="off"
+                       autofocus />
+                <ul id="productSuggestions" class="pos-suggestions"></ul>
+            </div>
+            <button type="submit" name="action" value="add" class="pos-add-btn">
+                <i class="bi bi-plus-circle"></i> Add Product to Cart
+            </button>
         </div>
 
-        <div class="col-md-3">
-            <label asp-for="PaymentType" class="form-label"></label>
-            <select asp-for="PaymentType" class="form-control">
-                <option>Cash</option>
-                <option>MobileMoney</option>
-                <option>Card</option>
-            </select>
-        </div>
+        @* Info card if cart empty *@
+        @if (!Model.Items.Any())
+        {
+            <div class="ss-card" style="text-align:center;padding:32px 20px;">
+                <i class="bi bi-cart3" style="font-size:42px;color:var(--ss-text-dim);margin-bottom:12px;display:block;"></i>
+                <div style="font-size:15px;font-weight:600;color:var(--ss-text-2);margin-bottom:6px;">Your cart is empty</div>
+                <div style="font-size:13px;color:var(--ss-text-muted);">Search for a product above or scan its barcode to start adding items.</div>
+            </div>
+        }
+        else
+        {
+            @* Mobile cart table (visible on small screens) *@
+            <div class="ss-card d-lg-none">
+                <div class="ss-card-header">
+                    <div class="ss-card-title"><i class="bi bi-cart3"></i> Cart Items</div>
+                </div>
+                <div class="ss-card-body-flush">
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--ss-border);display:flex;align-items:center;gap:12px;">
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:600;font-size:13.5px;color:var(--ss-text);">@Model.Items[i].ProductName</div>
+                                <div style="font-size:12px;color:var(--ss-text-muted);">TZS @Model.Items[i].UnitPrice.ToString("N0") each</div>
+                            </div>
+                            <input asp-for="Items[@i].Quantity"
+                                   class="form-control js-qty"
+                                   data-stock="@Model.Items[i].AvailableStock"
+                                   min="1"
+                                   style="width:70px;text-align:center;" />
+                            <input type="hidden" asp-for="Items[@i].ProductId" />
+                            <input type="hidden" asp-for="Items[@i].ProductName" />
+                            <input asp-for="Items[@i].UnitPrice" class="js-price" type="hidden" />
+                            <button type="submit" name="removeIndex" value="@i" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
     </div>
 
-    <!-- =====================
-         PRODUCT SEARCH (AUTOCOMPLETE)
-    ====================== -->
-    <div class="row mb-3 position-relative">
-        <div class="col-md-6">
-            <label>Search product (Name or SKU)</label>
-            <input asp-for="ProductSearch"
-                   id="productSearch"
-                   class="form-control"
-                   placeholder="Type product name or scan barcode"
-                   autocomplete="off"
-                   autofocus />
+    @* ══════════════ RIGHT PANEL (Cart) ══════════════ *@
+    <div class="pos-right d-none d-lg-flex flex-column">
 
-            <!-- 🔥 ADDED: Suggestions container -->
-            <ul id="productSuggestions"
-                class="list-group position-absolute w-100"
-                style="z-index:1000; display:none;">
-            </ul>
+        @* Cart header *@
+        <div class="pos-cart-header">
+            <span class="pos-cart-title"><i class="bi bi-cart3 me-1"></i> Order Summary</span>
+            <span class="pos-cart-count">@Model.Items.Count item@(Model.Items.Count != 1 ? "s" : "")</span>
         </div>
-    </div>
 
-    <!-- =====================
-         CART TABLE
-    ====================== -->
-    <table class="table table-bordered">
-        <thead class="table-light">
-            <tr>
-                <th>Product</th>
-                <th style="width:120px">Qty</th>
-                <th style="width:150px">Price</th>
-                <th style="width:150px">Subtotal</th>
-                <th style="width:80px"></th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (Model.Items.Count == 0)
+        @* Cart items *@
+        <div class="pos-cart-items">
+            @if (!Model.Items.Any())
             {
-                <tr>
-                    <td colspan="5" class="text-center text-muted">
-                        No items added yet
-                    </td>
-                </tr>
+                <div class="pos-empty-cart">
+                    <i class="bi bi-cart3"></i>
+                    <span>No items added yet</span>
+                </div>
             }
             else
             {
                 @for (int i = 0; i < Model.Items.Count; i++)
                 {
-                    <tr>
-                        <td>
-                            @Model.Items[i].ProductName
+                    <div class="pos-cart-item">
+                        <div>
+                            <div class="pos-item-name" title="@Model.Items[i].ProductName">@Model.Items[i].ProductName</div>
+                            <div class="pos-item-stock">
+                                Avail: @Model.Items[i].AvailableStock
+                                <small class="text-danger js-stock-msg" style="display:none;"></small>
+                            </div>
                             <input type="hidden" asp-for="Items[@i].ProductId" />
                             <input type="hidden" asp-for="Items[@i].ProductName" />
-                        </td>
-
-                        <td>
-                           
-
-                           @* <input asp-for="Items[@i].Quantity"
-                                   class="form-control js-qty"
-                                   data-index="@i"
-                                   min="1" /> *@
-
-
+                        </div>
+                        <div class="pos-qty-wrap">
                             <input asp-for="Items[@i].Quantity"
-                                   class="form-control js-qty"
+                                   class="pos-qty-input js-qty"
                                    data-stock="@Model.Items[i].AvailableStock"
-                                   min="1" />
-                            <small class="text-danger js-stock-msg" style="display:none;"></small>
-
-
-
-                        </td>
-
-                        <td>
-                            <input asp-for="Items[@i].UnitPrice"
-                                   class="form-control js-price"
-                                   readonly />
-                        </td>
-
-                        <td>
-                           @* <strong>@Model.Items[i].SubTotal.ToString("N0")</strong> *@
-                            <span class="js-subtotal">@Model.Items[i].SubTotal.ToString("N0")</span>
-                        </td>
-
-                        <td>
-                            <button type="submit"
-                                    name="removeIndex"
-                                    value="@i"
-                                    class="btn btn-sm btn-danger">
-                                ✕
-                            </button>
-                        </td>
-                    </tr>
+                                   min="1"
+                                   type="number" />
+                        </div>
+                        <input asp-for="Items[@i].UnitPrice" class="js-price" type="hidden" />
+                        <div class="pos-item-subtotal js-subtotal">
+                            @Model.Items[i].SubTotal.ToString("N0")
+                        </div>
+                        <button type="submit"
+                                name="removeIndex"
+                                value="@i"
+                                class="pos-remove-btn"
+                                title="Remove item">
+                            <i class="bi bi-x-lg" style="font-size:12px;"></i>
+                        </button>
+                    </div>
                 }
             }
-        </tbody>
-    </table>
-
-    <!-- =====================
-         TOTAL
-    ====================== -->
-    <div class="row mb-3">
-        <div class="col-md-6"></div>
-        <div class="col-md-6 text-end">
-            <h4>
-                Total:
-                <span class="text-success"    id="js-total">
-                    @Model.TotalAmount.ToString("N0")
-                </span>
-            </h4>
         </div>
+
+        @* Payment type (hidden select) *@
+        <div style="padding:12px 16px;border-top:1px solid var(--ss-border);background:var(--ss-surface-2);">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ss-text-muted);margin-bottom:8px;">Payment Method</div>
+            <select asp-for="PaymentType"
+                    id="PaymentType"
+                    class="form-select form-select-sm"
+                    style="border-radius:var(--ss-radius-sm);">
+                <option value="Cash">💵 Cash</option>
+                <option value="MobileMoney">📱 Mobile Money</option>
+                <option value="Card">💳 Card</option>
+            </select>
+        </div>
+
+        @* Total *@
+        <div class="pos-total-section">
+            <div class="pos-total-row">
+                <span>Subtotal</span>
+                <span id="js-total-sub">@Model.TotalAmount.ToString("N0")</span>
+            </div>
+            <div class="pos-total-main">
+                <span class="pos-total-label">TOTAL</span>
+                <span class="pos-total-amount" id="js-total">@Model.TotalAmount.ToString("N0")</span>
+            </div>
+        </div>
+
+        @* Actions *@
+        <div class="pos-actions">
+            <button type="submit"
+                    name="action"
+                    value="complete"
+                    id="btn-complete"
+                    class="pos-complete-btn"
+                    @(Model.Items.Count == 0 ? "disabled" : "")>
+                <i class="bi bi-check-lg"></i>
+                Complete Sale
+            </button>
+            <div style="font-size:11.5px;text-align:center;color:var(--ss-text-dim);">
+                <i class="bi bi-lock-fill me-1"></i>Secure checkout
+            </div>
+        </div>
+
     </div>
 
-    <!-- =====================
-         ACTIONS
-    ====================== -->
-    <div class="d-flex justify-content-between">
-        <button type="submit"
-                name="action"
-                value="add"
-                class="btn btn-secondary">
-            + Add Product
-        </button>
+    @* Mobile complete button *@
+    @if (Model.Items.Any())
+    {
+        <div class="d-lg-none" style="padding:16px 0 8px;">
+            <button type="submit"
+                    name="action"
+                    value="complete"
+                    class="pos-complete-btn"
+                    style="width:100%;">
+                <i class="bi bi-check-lg"></i>
+                Complete Sale — TZS <span id="js-total-mobile">@Model.TotalAmount.ToString("N0")</span>
+            </button>
+        </div>
+    }
 
-
-        <button type="submit"
-                name="action"
-                value="complete"
-                id="btn-complete"
-                class="btn btn-primary btn-lg">
-            COMPLETE SALE
-        </button>
-
-    </div>
+</div>
 
 </form>
 
-<!-- =====================
-     🔥 ADDED: AUTOCOMPLETE SCRIPT
-====================== -->
 @section Scripts {
-    <script>
-        const input = document.getElementById("productSearch");
-        const list = document.getElementById("productSuggestions");
-        let timer = null;
+<script>
+    const input = document.getElementById("productSearch");
+    const list = document.getElementById("productSuggestions");
+    let timer = null;
 
-        // ===== AUTOCOMPLETE =====
-        input?.addEventListener("keyup", function () {
-            clearTimeout(timer);
-
-            const term = input.value.trim();
-
-            if (term.length < 2) {
-                list.style.display = "none";
-                list.innerHTML = "";
-                return;
-            }
-
-            timer = setTimeout(() => {
-                fetch(`/Sales/SearchProducts?term=${encodeURIComponent(term)}`)
-                    .then(r => r.ok ? r.json() : Promise.reject(r))
-                    .then(data => {
-                        list.innerHTML = "";
-
-                        if (!data || data.length === 0) {
+    // ===== AUTOCOMPLETE =====
+    input?.addEventListener("keyup", function () {
+        clearTimeout(timer);
+        const term = input.value.trim();
+        if (term.length < 2) {
+            list.style.display = "none";
+            list.innerHTML = "";
+            return;
+        }
+        timer = setTimeout(() => {
+            fetch(`/Sales/SearchProducts?term=${encodeURIComponent(term)}`)
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then(data => {
+                    list.innerHTML = "";
+                    if (!data || data.length === 0) { list.style.display = "none"; return; }
+                    data.forEach(item => {
+                        const li = document.createElement("li");
+                        li.className = "pos-suggestion-item";
+                        li.innerHTML = `<i class="bi bi-box-seam" style="color:var(--ss-text-dim);flex-shrink:0;"></i>${item.label}`;
+                        li.addEventListener("click", () => {
+                            input.value = item.value;
                             list.style.display = "none";
-                            return;
-                        }
-
-                        data.forEach(item => {
-                            const li = document.createElement("li");
-                            li.className = "list-group-item list-group-item-action";
-                            li.textContent = item.label;
-
-                            li.addEventListener("click", () => {
-                                input.value = item.value;
-                                list.style.display = "none";
-
-                                // AUTO-ADD TO CART
-                                const form = input.closest("form");
-                                if (!form) return;
-
-                                // Prevent stacking hidden inputs on repeated clicks
-                                const existing = form.querySelector('input[name="action"][data-autogen="1"]');
-                                if (existing) existing.remove();
-
-                                const actionInput = document.createElement("input");
-                                actionInput.type = "hidden";
-                                actionInput.name = "action";
-                                actionInput.value = "add";
-                                actionInput.setAttribute("data-autogen", "1");
-
-                                form.appendChild(actionInput);
-                                form.submit();
-                            });
-
-                            list.appendChild(li);
+                            const form = input.closest("form");
+                            if (!form) return;
+                            const existing = form.querySelector('input[name="action"][data-autogen="1"]');
+                            if (existing) existing.remove();
+                            const actionInput = document.createElement("input");
+                            actionInput.type = "hidden";
+                            actionInput.name = "action";
+                            actionInput.value = "add";
+                            actionInput.setAttribute("data-autogen", "1");
+                            form.appendChild(actionInput);
+                            form.submit();
                         });
-
-                        list.style.display = "block";
-                    })
-                    .catch(() => {
-                        // If endpoint errors, just hide suggestions (don’t crash UI)
-                        list.style.display = "none";
-                        list.innerHTML = "";
+                        list.appendChild(li);
                     });
-            }, 300);
-        });
+                    list.style.display = "block";
+                })
+                .catch(() => { list.style.display = "none"; list.innerHTML = ""; });
+        }, 250);
+    });
 
-        // Hide suggestions when clicking outside  ✅ (THIS WAS BROKEN IN YOUR FILE)
-        document.addEventListener("click", function (e) {
-            if (!input) return;
-            if (!input.contains(e.target) && !list.contains(e.target)) {
-                list.style.display = "none";
+    document.addEventListener("click", function (e) {
+        if (!input) return;
+        if (!input.contains(e.target) && !list.contains(e.target))
+            list.style.display = "none";
+    });
+
+    // ===== CART RECALC + STOCK VALIDATION =====
+    function formatN0(n) { return Math.round(n).toLocaleString(); }
+
+    function recalcCart() {
+        let total = 0;
+        document.querySelectorAll(".js-qty").forEach(qtyInput => {
+            const row = qtyInput.closest('.pos-cart-item') || qtyInput.closest('div[style]');
+            const priceInput = row ? row.querySelector(".js-price") :
+                qtyInput.closest('tr')?.querySelector(".js-price");
+            const subtotalEl = row ? row.querySelector(".js-subtotal") :
+                qtyInput.closest('tr')?.querySelector(".js-subtotal");
+            const msg = row ? row.querySelector(".js-stock-msg") :
+                qtyInput.closest('tr')?.querySelector(".js-stock-msg");
+
+            // Also handle hidden price inputs (in pos-cart-item, price is hidden)
+            const hiddenPrice = document.querySelector(`input.js-price[name="${qtyInput.name.replace('Quantity','UnitPrice')}"]`);
+            const price = parseFloat((priceInput || hiddenPrice)?.value || "0");
+            const qty = parseInt(qtyInput.value || "0", 10);
+            const sub = Math.max(0, qty) * Math.max(0, price);
+            if (subtotalEl) subtotalEl.textContent = formatN0(sub);
+            total += sub;
+
+            const available = parseInt(qtyInput.dataset.stock || "9999", 10);
+            if (available >= 0 && qty > available) {
+                qtyInput.classList.add("is-invalid");
+                if (msg) { msg.style.display = "inline"; msg.textContent = `Max: ${available}`; }
+            } else {
+                qtyInput.classList.remove("is-invalid");
+                if (msg) { msg.style.display = "none"; msg.textContent = ""; }
             }
         });
 
-        // ===== CART RECALC + STOCK VALIDATION =====
-        function formatN0(n) {
-            return Math.round(n).toLocaleString();
-        }
+        const totalEl = document.getElementById("js-total");
+        const totalSubEl = document.getElementById("js-total-sub");
+        const totalMobile = document.getElementById("js-total-mobile");
+        if (totalEl) totalEl.textContent = formatN0(total);
+        if (totalSubEl) totalSubEl.textContent = formatN0(total);
+        if (totalMobile) totalMobile.textContent = formatN0(total);
 
-        function recalcCart() {
-            let total = 0;
+        const hasInvalid = document.querySelectorAll(".js-qty.is-invalid").length > 0;
+        const btn = document.getElementById("btn-complete");
+        if (btn) btn.disabled = hasInvalid;
+    }
 
-            document.querySelectorAll("tbody tr").forEach(row => {
-                const qtyInput = row.querySelector(".js-qty");
-                const priceInput = row.querySelector(".js-price");
-                const subtotalSpan = row.querySelector(".js-subtotal");
-                const msg = row.querySelector(".js-stock-msg");
+    document.addEventListener("input", function (e) {
+        if (e.target.classList && e.target.classList.contains("js-qty")) recalcCart();
+    });
 
-                // Skip the "No items added yet" row
-                if (!qtyInput || !priceInput || !subtotalSpan) return;
-
-                const qty = parseInt(qtyInput.value || "0", 10);
-                const price = parseFloat(priceInput.value || "0");
-
-                const sub = Math.max(0, qty) * Math.max(0, price);
-                subtotalSpan.textContent = formatN0(sub);
-                total += sub;
-
-                // Stock validation (client-side display only)
-                const available = parseInt(qtyInput.dataset.stock || "0", 10);
-
-                if (available >= 0 && qty > available) {
-                    qtyInput.classList.add("is-invalid");
-                    if (msg) {
-                        msg.style.display = "block";
-                        msg.textContent = `Only ${available} in stock`;
-                    }
-                } else {
-                    qtyInput.classList.remove("is-invalid");
-                    if (msg) {
-                        msg.style.display = "none";
-                        msg.textContent = "";
-                    }
-                }
-            });
-
-            const totalEl = document.getElementById("js-total");
-            if (totalEl) totalEl.textContent = formatN0(total);
-
-            // Disable complete if any invalid qty exists
-            const hasInvalid = document.querySelectorAll(".js-qty.is-invalid").length > 0;
-            const btn = document.getElementById("btn-complete");
-            if (btn) btn.disabled = hasInvalid;
-        }
-
-        // Live update totals/validation as cashier types
-        document.addEventListener("input", function (e) {
-            if (e.target.classList && e.target.classList.contains("js-qty")) {
-                recalcCart();
-            }
-        });
-
-        document.addEventListener("DOMContentLoaded", recalcCart);
-    </script>
+    document.addEventListener("DOMContentLoaded", recalcCart);
+</script>
 }
-

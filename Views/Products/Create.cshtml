@@ -1,111 +1,110 @@
-﻿@model SmartStock.Models.Product
+@model SmartStock.Models.Product
 
 @{
-    ViewData["Title"] = "Create Product";
+    ViewData["Title"] = "Add Product";
 }
 
-<h1>Create Product</h1>
+<div class="ss-breadcrumb">
+    <a asp-action="Index">Products</a>
+    <span class="sep"><i class="bi bi-chevron-right"></i></span>
+    <span class="current">Add Product</span>
+</div>
 
-@if (!ViewData.ModelState.IsValid)
-{
-    <div class="alert alert-danger">
-        <strong>Please fix the errors below.</strong>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Add New Product</h1>
+        <p class="page-subtitle">Fill in the details to add a product to your catalog</p>
     </div>
-}
+</div>
 
-@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@Html.ValidationSummary(false, "", new { @class = "alert alert-danger mb-4" })
 
 <form asp-action="Create" method="post">
+<div style="max-width:760px;">
 
-    <div class="form-row">
+    <div class="ss-form-card">
 
-        <!-- Product Name -->
-        <div class="form-group col-md-6">
-            <label asp-for="Name"></label>
-            <input asp-for="Name" class="form-control" />
-            <span asp-validation-for="Name" class="text-danger"></span>
-        </div>
-
-        <!-- Category -->
-        <div class="form-group col-md-3">
-            <label asp-for="CategoryId">Category</label>
-
-            <div class="d-flex gap-2">
-                <select asp-for="CategoryId"
-                        asp-items="ViewBag.Categories"
-                        class="form-control">
-                    <option value="">-- Select Category --</option>
-                </select>
-
-                <a asp-controller="Categories"
-                   asp-action="Create"
-                   class="btn btn-outline-secondary"
-                   title="Add new category">
-                    +
-                </a>
+        <div class="ss-form-section">
+            <div class="ss-form-section-title">Basic Information</div>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="Name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" placeholder="e.g. Coca-Cola 500ml" autofocus />
+                    <span asp-validation-for="Name" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="SKU" class="form-label">SKU / Barcode</label>
+                    <input asp-for="SKU" class="form-control" placeholder="e.g. CC-500" />
+                    <span asp-validation-for="SKU" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CategoryId" class="form-label">Category</label>
+                    <div class="d-flex gap-2">
+                        <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select">
+                            <option value="">— No Category —</option>
+                        </select>
+                        <a asp-controller="Categories" asp-action="Create"
+                           class="btn btn-outline-secondary flex-shrink-0"
+                           title="Create new category"
+                           style="white-space:nowrap;">
+                            <i class="bi bi-plus"></i>
+                        </a>
+                    </div>
+                    <span asp-validation-for="CategoryId" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="UnitId" class="form-label">Unit of Measure</label>
+                    <select asp-for="UnitId" asp-items="ViewBag.Units" class="form-select">
+                        <option value="">— No Unit —</option>
+                    </select>
+                    <span asp-validation-for="UnitId" class="text-danger small mt-1 d-block"></span>
+                </div>
             </div>
-
-            <span asp-validation-for="CategoryId" class="text-danger"></span>
         </div>
 
-        <!-- SKU -->
-        <div class="form-group col-md-3">
-            <label asp-for="SKU"></label>
-            <input asp-for="SKU" class="form-control" />
-            <span asp-validation-for="SKU" class="text-danger"></span>
+        <div class="ss-form-section">
+            <div class="ss-form-section-title">Pricing</div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label asp-for="BuyingPrice" class="form-label">Buying Price (TZS) <span class="text-danger">*</span></label>
+                    <input asp-for="BuyingPrice" class="form-control" placeholder="0" />
+                    <span asp-validation-for="BuyingPrice" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="SellingPrice" class="form-label">Selling Price (TZS) <span class="text-danger">*</span></label>
+                    <input asp-for="SellingPrice" class="form-control" placeholder="0" />
+                    <span asp-validation-for="SellingPrice" class="text-danger small mt-1 d-block"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="ReorderLevel" class="form-label">Reorder Level</label>
+                    <input asp-for="ReorderLevel" class="form-control" placeholder="e.g. 10" />
+                    <span asp-validation-for="ReorderLevel" class="text-danger small mt-1 d-block"></span>
+                </div>
+            </div>
         </div>
 
-    </div>
-
-    <div class="form-row">
-
-        <!-- Buying Price -->
-        <div class="form-group col-md-3">
-            <label asp-for="BuyingPrice"></label>
-            <input asp-for="BuyingPrice" class="form-control" />
-            <span asp-validation-for="BuyingPrice" class="text-danger"></span>
+        <div class="ss-form-section">
+            <div class="ss-form-section-title">Initial Stock</div>
+            <div class="col-md-4">
+                <label class="form-label">Opening Stock Quantity</label>
+                <input type="number" name="openingStock" class="form-control" min="0" placeholder="0 (optional)" />
+                <div style="font-size:12px;color:var(--ss-text-muted);margin-top:4px;">
+                    <i class="bi bi-info-circle"></i> Leave blank to start with zero stock.
+                </div>
+            </div>
         </div>
 
-        <!-- Selling Price -->
-        <div class="form-group col-md-3">
-            <label asp-for="SellingPrice"></label>
-            <input asp-for="SellingPrice" class="form-control" />
-            <span asp-validation-for="SellingPrice" class="text-danger"></span>
-        </div>
-
-        <!-- Unit -->
-        <div class="form-group col-md-2">
-            <label asp-for="UnitId">Unit</label>
-            <select asp-for="UnitId"
-                    asp-items="ViewBag.Units"
-                    class="form-control">
-                <option value="">-- Unit --</option>
-            </select>
-            <span asp-validation-for="UnitId" class="text-danger"></span>
-        </div>
-
-
-        <div class="form-group">
-            <label>Opening Stock (Optional)</label>
-            <input type="number" name="openingStock" class="form-control" min="0" />
-        </div>
-
-        <!-- Reorder Level -->
-        <div class="form-group col-md-2">
-            <label asp-for="ReorderLevel"></label>
-            <input asp-for="ReorderLevel" class="form-control" />
-            <span asp-validation-for="ReorderLevel" class="text-danger"></span>
+        <div class="ss-form-footer">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i> Create Product
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
         </div>
 
     </div>
-
-    <button type="submit" class="btn btn-success">Create</button>
-    <a asp-action="Index" class="btn btn-secondary">Back</a>
-
+</div>
 </form>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

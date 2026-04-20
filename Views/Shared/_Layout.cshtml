@@ -3,14 +3,15 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - SmartStock</title>
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " — SmartStock" : "SmartStock")</title>
+    <meta name="theme-color" content="#1b2a3b" />
     <script type="importmap"></script>
 
     @* Bootstrap CSS (local) *@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    @* Bootstrap Icons (CDN) *@
+    @* Bootstrap Icons *@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    @* App global *@
+    @* App global (includes Google Fonts + design system) *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
     <style>
@@ -553,21 +554,63 @@
             <span class="sb-topbar-brand">SmartStock</span>
         </header>
 
+        @* Desktop top bar — breadcrumb + clock + role *@
+        @{
+            var _ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+            var _pageLabel = _ctrl switch {
+                "Home"       => "Dashboard",
+                "Sales"      => (ViewContext.RouteData.Values["action"]?.ToString() == "New") ? "New Sale" : "Sales",
+                "Products"   => "Products",
+                "Expenses"   => "Expenses",
+                "Reports"    => "Reports",
+                "Users"      => "Users",
+                "Categories" => "Categories",
+                _            => _ctrl
+            };
+        }
+        <header class="ss-topbar no-print">
+            <div class="ss-topbar-left">
+                <i class="bi bi-house" style="color:var(--ss-text-dim);font-size:14px;"></i>
+                <i class="bi bi-chevron-right" style="color:var(--ss-text-dim);font-size:11px;"></i>
+                <span style="font-weight:600;color:var(--ss-text-2);font-size:13px;">@_pageLabel</span>
+            </div>
+            <div class="ss-topbar-right">
+                <span class="ss-topbar-clock" id="ss-clock"></span>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    @if (User.IsInRole("TenantAdmin"))
+                    {
+                        <span class="ss-role-badge admin"><i class="bi bi-shield-check"></i> Admin</span>
+                    }
+                    else if (User.IsInRole("Manager"))
+                    {
+                        <span class="ss-role-badge manager"><i class="bi bi-person-gear"></i> Manager</span>
+                    }
+                    else if (User.IsInRole("Cashier"))
+                    {
+                        <span class="ss-role-badge cashier"><i class="bi bi-person"></i> Cashier</span>
+                    }
+                }
+            </div>
+        </header>
+
         @* Page content *@
         <div class="page-body">
 
             @if (TempData["Success"] != null)
             {
-                <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                    <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-success alert-dismissible fade show mb-4 d-flex align-items-center" role="alert">
+                    <i class="bi bi-check-circle-fill me-2 flex-shrink-0"></i>
+                    <span>@TempData["Success"]</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
             @if (TempData["Error"] != null)
             {
-                <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
+                    <span>@TempData["Error"]</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
 
@@ -650,6 +693,34 @@
                 }
             });
         })();
+    </script>
+
+    <script>
+        // Live clock in topbar
+        (function() {
+            function tick() {
+                var el = document.getElementById('ss-clock');
+                if (!el) return;
+                var now = new Date();
+                var h = now.getHours().toString().padStart(2,'0');
+                var m = now.getMinutes().toString().padStart(2,'0');
+                var s = now.getSeconds().toString().padStart(2,'0');
+                var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                el.textContent = days[now.getDay()] + ' ' + h + ':' + m + ':' + s;
+            }
+            tick();
+            setInterval(tick, 1000);
+        })();
+
+        // Auto-dismiss alerts after 5s
+        document.querySelectorAll('.alert.alert-success, .alert.alert-danger').forEach(function(el) {
+            setTimeout(function() {
+                if (el && el.classList.contains('show')) {
+                    var bsAlert = bootstrap.Alert.getOrCreateInstance(el);
+                    if (bsAlert) bsAlert.close();
+                }
+            }, 5000);
+        });
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

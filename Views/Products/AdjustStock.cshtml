@@ -1,36 +1,72 @@
-﻿@model SmartStock.ViewModels.AdjustStockViewModel
-
+@model SmartStock.ViewModels.AdjustStockViewModel
 
 @{
     ViewData["Title"] = "Adjust Stock";
 }
 
-<h2>Adjust Stock</h2>
-
-<div class="alert alert-info">
-    Use this to correct stock mistakes. Enter a <strong>positive</strong> or <strong>negative</strong> quantity.
+<div class="ss-breadcrumb">
+    <a asp-action="Index">Products</a>
+    <span class="sep"><i class="bi bi-chevron-right"></i></span>
+    <a asp-action="Details" asp-route-id="@Model.ProductId">@Model.ProductName</a>
+    <span class="sep"><i class="bi bi-chevron-right"></i></span>
+    <span class="current">Adjust Stock</span>
 </div>
 
-<form asp-action="AdjustStock" method="post">
-    <input type="hidden" asp-for="ProductId" />
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Adjust Stock</h1>
+        <p class="page-subtitle">Correct inventory for <strong>@Model.ProductName</strong></p>
+    </div>
+</div>
 
-    <div class="mb-3">
-        <label class="form-label">Product</label>
-        <input class="form-control" value="@Model.ProductName" disabled />
+<div style="max-width:520px;">
+
+    <div class="alert alert-info d-flex gap-2 align-items-start mb-4">
+        <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+        <div>
+            Use <strong>positive numbers</strong> to add stock (e.g. +10) and
+            <strong>negative numbers</strong> to remove stock (e.g. -5).
+            A reason is required for every adjustment.
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="Quantity" class="form-label"></label>
-        <input asp-for="Quantity" class="form-control" />
-        <span asp-validation-for="Quantity" class="text-danger"></span>
-    </div>
+    <div class="ss-form-card">
+        <form asp-action="AdjustStock" method="post">
+            <input type="hidden" asp-for="ProductId" />
 
-    <div class="mb-3">
-        <label asp-for="Reason" class="form-label"></label>
-        <textarea asp-for="Reason" class="form-control"></textarea>
-        <span asp-validation-for="Reason" class="text-danger"></span>
-    </div>
+            <div class="ss-form-section">
+                <div class="mb-3">
+                    <label class="form-label">Product</label>
+                    <input class="form-control" value="@Model.ProductName" disabled
+                           style="background:var(--ss-surface-2);" />
+                </div>
 
-    <button type="submit" class="btn btn-warning">Apply Adjustment</button>
-    <a asp-action="Details" asp-route-id="@Model.ProductId" class="btn btn-secondary">Cancel</a>
-</form>
+                <div class="mb-3">
+                    <label asp-for="Quantity" class="form-label">
+                        Quantity Change <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="Quantity" class="form-control"
+                           style="font-size:20px;text-align:center;font-weight:700;padding:12px;"
+                           placeholder="e.g. +10 or -5" />
+                    <span asp-validation-for="Quantity" class="text-danger small mt-1 d-block"></span>
+                </div>
+
+                <div class="mb-0">
+                    <label asp-for="Reason" class="form-label">
+                        Reason <span class="text-danger">*</span>
+                    </label>
+                    <textarea asp-for="Reason" class="form-control" rows="3"
+                              placeholder="e.g. Damaged goods, Stocktake correction..."></textarea>
+                    <span asp-validation-for="Reason" class="text-danger small mt-1 d-block"></span>
+                </div>
+            </div>
+
+            <div class="ss-form-footer">
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-sliders me-1"></i> Apply Adjustment
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.ProductId" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

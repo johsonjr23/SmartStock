@@ -1,73 +1,88 @@
-﻿@model IEnumerable<SmartStock.Models.Product>
+@model IEnumerable<SmartStock.Models.Product>
 
 @{
-    ViewData["Title"] = "Deactivated Products";
+    ViewData["Title"] = "Archived Products";
 }
 
-<h2>Deactivated Products</h2>
-<form method="get" asp-action="Inactive" class="mb-3">
-    <div class="input-group">
-        <input type="text"
-               name="search"
-               value="@ViewBag.Search"
-               class="form-control"
-               placeholder="Search inactive products..." />
+<div class="ss-breadcrumb">
+    <a asp-action="Index">Products</a>
+    <span class="sep"><i class="bi bi-chevron-right"></i></span>
+    <span class="current">Archived</span>
+</div>
 
-        <button class="btn btn-outline-secondary" type="submit">
-            Search
-        </button>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Archived Products</h1>
+        <p class="page-subtitle">Deactivated products — not available for sale</p>
+    </div>
+    <div class="page-header-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Active Products
+        </a>
+    </div>
+</div>
+
+<form method="get" asp-action="Inactive" class="filter-bar mb-4">
+    <div class="filter-group" style="flex:1;">
+        <label class="filter-label">Search Archived</label>
+        <div style="position:relative;">
+            <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ss-text-dim);pointer-events:none;"></i>
+            <input type="text" name="search" value="@ViewBag.Search"
+                   class="filter-control" style="padding-left:32px;width:100%;"
+                   placeholder="Product name or SKU..." />
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
     </div>
 </form>
 
-<div class="alert alert-warning">
-    These products are inactive and not available for sale.
-</div>
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Selling Price</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var p in Model)
-        {
-            <tr>
-                <td>@p.Name</td>
-                <td>@(p.Category?.Name ?? "-")</td>
-                <td>@p.SellingPrice</td>
-                <td>
-                    <form asp-action="Activate"
-                          asp-route-id="@p.Id"
-                          method="post"
-                          class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button class="btn btn-success">
-                            Activate
-                        </button>
-                    </form>
-                </td>
-            </tr>
-        }
-    </tbody>
-    @if (!Model.Any())
-    {
-        <tr>
-            <td colspan="8" class="text-center text-muted">
-                No inactive products found.
-            </td>
-        </tr>
-    }
-
-</table>
-@if (TempData["Success"] != null)
+@if (!Model.Any())
 {
-    <div class="alert alert-success">
-        @TempData["Success"]
+    <div class="ss-card">
+        <div class="ss-empty">
+            <i class="bi bi-archive ss-empty-icon"></i>
+            <div class="ss-empty-title">No archived products</div>
+            <div class="ss-empty-text">Deactivated products will appear here.</div>
+        </div>
     </div>
 }
-
-<a asp-action="Index" class="btn btn-secondary">Back to Products</a>
+else
+{
+    <div class="ss-card">
+        <div class="ss-card-body-flush">
+            <div class="ss-table-wrap">
+                <table class="ss-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th class="num">Selling Price</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="td-name" style="color:var(--ss-text-muted);">@p.Name</span>
+                                </td>
+                                <td style="color:var(--ss-text-muted);">@(p.Category?.Name ?? "—")</td>
+                                <td class="num" style="color:var(--ss-text-muted);">@p.SellingPrice.ToString("N0")</td>
+                                <td class="text-center">
+                                    <form asp-action="Activate" asp-route-id="@p.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn btn-sm btn-success">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Reactivate
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}

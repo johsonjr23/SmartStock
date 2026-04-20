@@ -12,7 +12,7 @@ using SmartStock.Data;
 namespace SmartStock.Migrations.SmartStockIdentityDb
 {
     [DbContext(typeof(SmartStockIdentityDbContext))]
-    [Migration("20260323123759_InitialIdentity")]
+    [Migration("20260420134442_InitialIdentity")]
     partial class InitialIdentity
     {
         /// <inheritdoc />

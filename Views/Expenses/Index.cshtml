@@ -1,40 +1,112 @@
-﻿@model List<SmartStock.Models.Expense>
+@model List<SmartStock.Models.Expense>
 
-<h2>Expenses</h2>
+@{
+    ViewData["Title"] = "Expenses";
+    var totalShown = Model?.Sum(e => e.Amount) ?? 0;
+}
 
-<p>
-    <a class="btn btn-primary" asp-action="New">New Expense</a>
-</p>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Expenses</h1>
+        <p class="page-subtitle">Track and review business expenses</p>
+    </div>
+    <div class="page-header-actions">
+        <a asp-action="New" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Expense
+        </a>
+    </div>
+</div>
 
-<form method="get" class="mb-3">
-    <input type="date" name="from" />
-    <input type="date" name="to" />
-    <input type="text" name="q" placeholder="Search type/payee/notes" />
-    <button type="submit" class="btn btn-secondary">Filter</button>
+@* Filter bar *@
+<form method="get" class="filter-bar mb-4">
+    <div class="filter-group">
+        <label class="filter-label">From</label>
+        <input type="date" name="from" class="filter-control" value="@Context.Request.Query["from"]" />
+    </div>
+    <div class="filter-group">
+        <label class="filter-label">To</label>
+        <input type="date" name="to" class="filter-control" value="@Context.Request.Query["to"]" />
+    </div>
+    <div class="filter-group" style="flex:1;min-width:180px;">
+        <label class="filter-label">Search</label>
+        <input type="text" name="q" class="filter-control" style="width:100%;"
+               value="@Context.Request.Query["q"]" placeholder="Type, payee, or notes..." />
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-funnel"></i> Filter
+        </button>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-x"></i>
+        </a>
+    </div>
 </form>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Payee</th>
-            <th class="text-end">Amount</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var e in Model)
-        {
-            <tr>
-                <td>@e.ExpenseDate.ToString("yyyy-MM-dd")</td>
-                <td>@e.Type</td>
-                <td>@(e.Payee ?? "-")</td>
-                <td class="text-end">@e.Amount.ToString("N2")</td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@e.Id">View</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+@if (Model == null || !Model.Any())
+{
+    <div class="ss-card">
+        <div class="ss-empty">
+            <i class="bi bi-wallet2 ss-empty-icon"></i>
+            <div class="ss-empty-title">No expenses found</div>
+            <div class="ss-empty-text">Record your first business expense to start tracking spending.</div>
+            <a asp-action="New" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle me-1"></i> Add Expense
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    @* Summary stat *@
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+        <div style="background:var(--ss-surface);border:1px solid var(--ss-border);border-radius:var(--ss-radius);padding:10px 18px;font-size:13px;color:var(--ss-text-muted);">
+            Showing <strong style="color:var(--ss-text);">@Model.Count</strong> expense(s) &nbsp;·&nbsp;
+            Total: <strong style="color:var(--ss-danger);">TZS @totalShown.ToString("N0")</strong>
+        </div>
+    </div>
+
+    <div class="ss-card">
+        <div class="ss-card-body-flush">
+            <div class="ss-table-wrap">
+                <table class="ss-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Payee</th>
+                            <th>Notes</th>
+                            <th class="num">Amount (TZS)</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in Model)
+                        {
+                            <tr>
+                                <td style="font-size:13px;color:var(--ss-text-muted);">
+                                    @e.ExpenseDate.ToString("MMM d, yyyy")
+                                </td>
+                                <td>
+                                    <span class="ss-badge ss-badge-warning">@e.Type</span>
+                                </td>
+                                <td style="font-size:13px;color:var(--ss-text-2);">@(e.Payee ?? "—")</td>
+                                <td style="font-size:12.5px;color:var(--ss-text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                    @(e.Notes ?? "—")
+                                </td>
+                                <td class="num" style="font-weight:700;color:var(--ss-danger);">
+                                    @e.Amount.ToString("N0")
+                                </td>
+                                <td class="text-center">
+                                    <a asp-action="Details" asp-route-id="@e.Id"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-eye me-1"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}

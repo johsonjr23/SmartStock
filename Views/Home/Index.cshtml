@@ -1,8 +1,276 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@using Microsoft.AspNetCore.Identity
+@using SmartStock.Data
+@using SmartStock.Models
+@inject SmartStockDbContext _dashDb
+@inject UserManager<ApplicationUser> _dashUM
+
+@{
+    ViewData["Title"] = "Dashboard";
+
+    var dashUserId = _dashUM.GetUserId(User);
+    var dashUser   = dashUserId != null ? await _dashUM.FindByIdAsync(dashUserId) : null;
+    int tenantId   = dashUser?.TenantId ?? 0;
+
+    var today      = DateTime.Today;
+    var tomorrow   = today.AddDays(1);
+
+    // KPI queries
+    var todaySalesCount = tenantId > 0
+        ? _dashDb.Sales.Count(s => s.TenantId == tenantId
+            && s.Status == SaleStatus.Completed
+            && s.CompletedAt >= today && s.CompletedAt < tomorrow)
+        : 0;
+
+    var todaySalesTotal = tenantId > 0
+        ? (_dashDb.Sales
+            .Where(s => s.TenantId == tenantId
+                && s.Status == SaleStatus.Completed
+                && s.CompletedAt >= today && s.CompletedAt < tomorrow)
+            .Sum(s => (decimal?)s.TotalAmount) ?? 0m)
+        : 0m;
+
+    var totalProducts = tenantId > 0
+        ? _dashDb.Products.Count(p => p.TenantId == tenantId && p.IsActive)
+        : 0;
+
+    // Low stock: products at or below reorder level
+    var lowStockCount = 0;
+    if (tenantId > 0)
+    {
+        var stockByProduct = _dashDb.InventoryTransactions
+            .Where(t => t.TenantId == tenantId)
+            .GroupBy(t => t.ProductId)
+            .Select(g => new { ProductId = g.Key, Qty = g.Sum(x => x.QuantityChange) })
+            .ToList();
+
+        var activeProducts = _dashDb.Products
+            .Where(p => p.TenantId == tenantId && p.IsActive)
+            .Select(p => new { p.Id, p.ReorderLevel })
+            .ToList();
+
+        foreach (var ap in activeProducts)
+        {
+            var stockEntry = stockByProduct.FirstOrDefault(x => x.ProductId == ap.Id);
+            var qty = stockEntry?.Qty ?? 0;
+            if (qty <= (ap.ReorderLevel ?? 0))
+                lowStockCount++;
+        }
+    }
+
+    // Recent sales (last 10)
+    var recentSales = tenantId > 0
+        ? _dashDb.Sales
+            .Where(s => s.TenantId == tenantId)
+            .OrderByDescending(s => s.Id)
+            .Take(10)
+            .ToList()
+        : new List<Sale>();
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">@DateTime.Now.ToString("dddd, MMMM d, yyyy")</p>
+    </div>
+    @if (User.IsInRole("TenantAdmin") || User.IsInRole("Manager") || User.IsInRole("Cashier"))
+    {
+        <div class="page-header-actions">
+            <a asp-controller="Sales" asp-action="New" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Sale
+            </a>
+        </div>
+    }
+</div>
+
+@* ── KPI Cards ── *@
+<div class="kpi-grid">
+
+    <div class="kpi-card kpi-blue">
+        <div class="kpi-icon"><i class="bi bi-currency-dollar"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-value">@todaySalesTotal.ToString("N0")</div>
+            <div class="kpi-label">Today's Revenue</div>
+            <div class="kpi-trend up">
+                <i class="bi bi-calendar3"></i> Today
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card kpi-green">
+        <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-value">@todaySalesCount</div>
+            <div class="kpi-label">Transactions Today</div>
+            <div class="kpi-trend up">
+                <i class="bi bi-check-circle"></i> Completed
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card kpi-teal">
+        <div class="kpi-icon"><i class="bi bi-box-seam"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-value">@totalProducts</div>
+            <div class="kpi-label">Active Products</div>
+            <div class="kpi-trend" style="color:var(--ss-text-muted);">
+                <i class="bi bi-layers"></i> In catalog
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card @(lowStockCount > 0 ? "kpi-red" : "kpi-amber")">
+        <div class="kpi-icon"><i class="bi bi-exclamation-triangle@(lowStockCount > 0 ? "-fill" : "")"></i></div>
+        <div class="kpi-body">
+            <div class="kpi-value">@lowStockCount</div>
+            <div class="kpi-label">Low Stock Alerts</div>
+            @if (lowStockCount > 0 && User.IsInRole("TenantAdmin"))
+            {
+                <div class="kpi-trend down">
+                    <a asp-controller="Reports" asp-action="LowStock"
+                       style="color:inherit;text-decoration:underline;font-size:11px;">View all</a>
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+@* ── Quick Actions ── *@
+<div class="row g-3 mb-4">
+    @if (User.IsInRole("TenantAdmin") || User.IsInRole("Manager") || User.IsInRole("Cashier"))
+    {
+        <div class="col-6 col-md-3">
+            <a asp-controller="Sales" asp-action="New"
+               class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none"
+               style="background:var(--ss-surface);border:1px solid var(--ss-border);border-radius:var(--ss-radius-lg);box-shadow:var(--ss-shadow-xs);transition:all 0.18s ease;gap:8px;min-height:90px;"
+               onmouseover="this.style.boxShadow='var(--ss-shadow-md)';this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.boxShadow='var(--ss-shadow-xs)';this.style.transform=''">
+                <div style="width:42px;height:42px;background:var(--ss-primary-light);color:var(--ss-primary);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">
+                    <i class="bi bi-plus-circle"></i>
+                </div>
+                <span style="font-size:12.5px;font-weight:600;color:var(--ss-text-2);">New Sale</span>
+            </a>
+        </div>
+    }
+    @if (User.IsInRole("TenantAdmin") || User.IsInRole("Manager"))
+    {
+        <div class="col-6 col-md-3">
+            <a asp-controller="Products" asp-action="Index"
+               class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none"
+               style="background:var(--ss-surface);border:1px solid var(--ss-border);border-radius:var(--ss-radius-lg);box-shadow:var(--ss-shadow-xs);transition:all 0.18s ease;gap:8px;min-height:90px;"
+               onmouseover="this.style.boxShadow='var(--ss-shadow-md)';this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.boxShadow='var(--ss-shadow-xs)';this.style.transform=''">
+                <div style="width:42px;height:42px;background:#d1fae5;color:#059669;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <span style="font-size:12.5px;font-weight:600;color:var(--ss-text-2);">Products</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a asp-controller="Expenses" asp-action="New"
+               class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none"
+               style="background:var(--ss-surface);border:1px solid var(--ss-border);border-radius:var(--ss-radius-lg);box-shadow:var(--ss-shadow-xs);transition:all 0.18s ease;gap:8px;min-height:90px;"
+               onmouseover="this.style.boxShadow='var(--ss-shadow-md)';this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.boxShadow='var(--ss-shadow-xs)';this.style.transform=''">
+                <div style="width:42px;height:42px;background:#fef3c7;color:#d97706;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <span style="font-size:12.5px;font-weight:600;color:var(--ss-text-2);">Add Expense</span>
+            </a>
+        </div>
+    }
+    @if (User.IsInRole("TenantAdmin"))
+    {
+        <div class="col-6 col-md-3">
+            <a asp-controller="Reports" asp-action="Profit"
+               class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none"
+               style="background:var(--ss-surface);border:1px solid var(--ss-border);border-radius:var(--ss-radius-lg);box-shadow:var(--ss-shadow-xs);transition:all 0.18s ease;gap:8px;min-height:90px;"
+               onmouseover="this.style.boxShadow='var(--ss-shadow-md)';this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.boxShadow='var(--ss-shadow-xs)';this.style.transform=''">
+                <div style="width:42px;height:42px;background:#e0f2fe;color:#0284c7;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">
+                    <i class="bi bi-bar-chart-line"></i>
+                </div>
+                <span style="font-size:12.5px;font-weight:600;color:var(--ss-text-2);">Reports</span>
+            </a>
+        </div>
+    }
+</div>
+
+@* ── Recent Sales ── *@
+<div class="ss-card">
+    <div class="ss-card-header">
+        <div class="ss-card-title">
+            <i class="bi bi-clock-history"></i> Recent Transactions
+        </div>
+        <div class="ss-card-actions">
+            <a asp-controller="Sales" asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                View all <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+    <div class="ss-card-body-flush">
+        @if (!recentSales.Any())
+        {
+            <div class="ss-empty">
+                <i class="bi bi-receipt ss-empty-icon"></i>
+                <div class="ss-empty-title">No sales yet</div>
+                <div class="ss-empty-text">Complete your first sale to see it here.</div>
+            </div>
+        }
+        else
+        {
+            <div class="ss-table-wrap">
+                <table class="ss-table">
+                    <thead>
+                        <tr>
+                            <th>Invoice</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th class="num">Total (TZS)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in recentSales)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="td-name">
+                                        @(!string.IsNullOrWhiteSpace(s.InvoiceNumber)
+                                            ? s.InvoiceNumber
+                                            : $"SALE-{s.Id:D6}")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (s.Status == SaleStatus.Voided)
+                                    {
+                                        <span class="ss-badge ss-badge-danger"><i class="bi bi-x-circle"></i> Voided</span>
+                                    }
+                                    else if (s.Status == SaleStatus.Refunded)
+                                    {
+                                        <span class="ss-badge ss-badge-warning"><i class="bi bi-arrow-counterclockwise"></i> Refunded</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ss-badge ss-badge-success"><i class="bi bi-check-circle"></i> Completed</span>
+                                    }
+                                </td>
+                                <td style="color:var(--ss-text-muted);font-size:13px;">
+                                    @s.CreatedAt.ToString("MMM d, HH:mm")
+                                </td>
+                                <td class="num" style="font-weight:700;">@s.TotalAmount.ToString("N0")</td>
+                                <td>
+                                    <a asp-controller="Sales" asp-action="Details" asp-route-id="@s.Id"
+                                       class="btn btn-sm btn-outline-secondary btn-icon-sm"
+                                       title="View details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
 </div>
