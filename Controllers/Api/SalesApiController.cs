@@ -129,6 +129,137 @@ namespace SmartStock.Controllers.Api
             return Ok(sales);
         }
 
+        // POST /api/sales/{id}/void
+        [HttpPost("{id}/void")]
+        public async Task<IActionResult> VoidSale(int id, [FromBody] ReasonRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Reason))
+                return BadRequest(new { error = "Void reason is required." });
+
+            var tenantId = GetTenantId();
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var sale = await _db.Sales
+                    .Where(s => s.TenantId == tenantId && s.Id == id)
+                    .Include(s => s.SaleItems)
+                    .FirstOrDefaultAsync()
+                    ?? throw new Exception("Sale not found.");
+
+                if (sale.Status != SaleStatus.Completed)
+                    throw new Exception($"Sale cannot be voided because it is {sale.Status}.");
+
+                sale.Status = SaleStatus.Voided;
+                sale.VoidedAt = DateTime.UtcNow;
+                sale.VoidReason = req.Reason.Trim();
+
+                foreach (var item in sale.SaleItems)
+                {
+                    await LockProductAsync(tenantId, item.ProductId);
+                    _db.InventoryTransactions.Add(new InventoryTransaction
+                    {
+                        TenantId = tenantId,
+                        ProductId = item.ProductId,
+                        SaleId = sale.Id,
+                        QuantityChange = item.Quantity,
+                        TransactionType = InventoryTransactionType.Void,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+                return Ok(new { message = "Sale voided successfully." });
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // POST /api/sales/{id}/refund
+        [HttpPost("{id}/refund")]
+        public async Task<IActionResult> RefundSale(int id, [FromBody] ReasonRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Reason))
+                return BadRequest(new { error = "Refund reason is required." });
+
+            var tenantId = GetTenantId();
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var original = await _db.Sales
+                    .Where(s => s.TenantId == tenantId && s.Id == id)
+                    .Include(s => s.SaleItems)
+                    .FirstOrDefaultAsync()
+                    ?? throw new Exception("Sale not found.");
+
+                if (original.Status != SaleStatus.Completed)
+                    throw new Exception($"Sale cannot be refunded because it is {original.Status}.");
+
+                var refundSale = new Sale
+                {
+                    TenantId = tenantId,
+                    TotalAmount = 0m,
+                    Status = SaleStatus.Refunded,
+                    CompletedAt = DateTime.UtcNow,
+                    OriginalSaleId = original.Id,
+                    RefundedAt = DateTime.UtcNow,
+                    RefundReason = req.Reason.Trim()
+                };
+                _db.Sales.Add(refundSale);
+                await _db.SaveChangesAsync();
+
+                decimal refundTotal = 0m;
+                foreach (var item in original.SaleItems.OrderBy(i => i.ProductId))
+                {
+                    await LockProductAsync(tenantId, item.ProductId);
+
+                    var product = await _db.Products
+                        .Where(p => p.TenantId == tenantId && p.IsActive && p.Id == item.ProductId)
+                        .FirstOrDefaultAsync()
+                        ?? throw new Exception("Product not found.");
+
+                    var lineTotal = -item.SellingPrice * item.Quantity;
+                    refundTotal += lineTotal;
+
+                    _db.SaleItems.Add(new SaleItem
+                    {
+                        SaleId = refundSale.Id,
+                        TenantId = tenantId,
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity,
+                        SellingPrice = -item.SellingPrice,
+                        BuyingPriceAtSale = item.BuyingPriceAtSale ?? product.BuyingPrice,
+                        SubTotal = lineTotal
+                    });
+                    _db.InventoryTransactions.Add(new InventoryTransaction
+                    {
+                        TenantId = tenantId,
+                        ProductId = item.ProductId,
+                        SaleId = refundSale.Id,
+                        QuantityChange = item.Quantity,
+                        TransactionType = InventoryTransactionType.Refund
+                    });
+                }
+
+                refundSale.TotalAmount = refundTotal;
+                original.Status = SaleStatus.Refunded;
+                original.RefundedAt = refundSale.RefundedAt;
+                original.RefundReason = refundSale.RefundReason;
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+                return Ok(new { message = "Refund completed successfully." });
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
         // ── helpers ──────────────────────────────────────────────────────
 
         private int GetTenantId()
@@ -158,5 +289,10 @@ WHERE TenantId = {0} AND Id = {1}", tenantId, productId);
     {
         public int ProductId { get; set; }
         public int Quantity { get; set; }
+    }
+
+    public class ReasonRequest
+    {
+        public string Reason { get; set; } = "";
     }
 }

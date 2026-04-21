@@ -69,28 +69,26 @@ namespace SmartStock.Controllers.Api
 
             var code = await _userManager.GenerateTwoFactorTokenAsync(user, "Email");
             try { await _email.SendTwoFactorCodeAsync(user.Email!, user.FullName ?? user.Email!, code); }
-            catch { /* continue even if email fails */ }
+            catch { }
 
-            return Ok(new { requiresTwoFactor = true, pendingToken = BuildPendingToken(user.Id) });
+            // Return the email so the verify step can look up the user — no token needed
+            return Ok(new { requiresTwoFactor = true, email = user.Email });
         }
 
         // POST /api/auth/verify
         [HttpPost("verify")]
         public async Task<IActionResult> Verify([FromBody] ApiVerifyRequest req)
         {
-            if (string.IsNullOrWhiteSpace(req.PendingToken) || string.IsNullOrWhiteSpace(req.Code))
-                return BadRequest(new { error = "Token and code are required." });
+            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Code))
+                return BadRequest(new { error = "Email and code are required." });
 
-            var userId = ValidatePendingToken(req.PendingToken);
-            if (userId == null)
-                return Unauthorized(new { error = "Session expired. Please login again." });
-
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userManager.FindByEmailAsync(req.Email);
             if (user == null)
                 return Unauthorized(new { error = "User not found." });
 
-            if (!await _userManager.VerifyTwoFactorTokenAsync(user, "Email", req.Code.Trim()))
-                return Unauthorized(new { error = "Incorrect or expired code." });
+            var valid = await _userManager.VerifyTwoFactorTokenAsync(user, "Email", req.Code.Trim());
+            if (!valid)
+                return Unauthorized(new { error = "Incorrect or expired code. Please try again." });
 
             var roles = await _userManager.GetRolesAsync(user);
             var role = roles.FirstOrDefault() ?? "Cashier";
@@ -106,45 +104,11 @@ namespace SmartStock.Controllers.Api
 
         // ── helpers ──────────────────────────────────────────────────────
 
-        private string BuildPendingToken(string userId)
-        {
-            var creds = GetCreds();
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, userId),
-                new Claim("typ", "2fa-pending")
-            };
-            var token = new JwtSecurityToken(
-                _config["Jwt:Issuer"], _config["Jwt:Audience"],
-                claims, expires: DateTime.UtcNow.AddMinutes(10),
-                signingCredentials: creds);
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private string? ValidatePendingToken(string token)
-        {
-            try
-            {
-                var handler = new JwtSecurityTokenHandler();
-                var principal = handler.ValidateToken(token, new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = GetKey(),
-                    ValidateIssuer = true, ValidIssuer = _config["Jwt:Issuer"],
-                    ValidateAudience = true, ValidAudience = _config["Jwt:Audience"],
-                    ValidateLifetime = true, ClockSkew = TimeSpan.FromMinutes(2)
-                }, out _);
-
-                return principal.FindFirstValue("typ") == "2fa-pending"
-                    ? principal.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                    : null;
-            }
-            catch { return null; }
-        }
-
         private string BuildAccessToken(ApplicationUser user, string role)
         {
-            var creds = GetCreds();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
@@ -153,21 +117,17 @@ namespace SmartStock.Controllers.Api
                 new Claim("tenantId", user.TenantId?.ToString() ?? ""),
                 new Claim("fullName", user.FullName ?? user.Email!)
             };
+
             var hours = int.TryParse(_config["Jwt:ExpiryHours"], out var h) ? h : 8;
             var token = new JwtSecurityToken(
                 _config["Jwt:Issuer"], _config["Jwt:Audience"],
                 claims, expires: DateTime.UtcNow.AddHours(hours),
                 signingCredentials: creds);
+
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
-        private SymmetricSecurityKey GetKey() =>
-            new(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
-
-        private SigningCredentials GetCreds() =>
-            new(GetKey(), SecurityAlgorithms.HmacSha256);
     }
 
     public record ApiLoginRequest(string Email, string Password);
-    public record ApiVerifyRequest(string PendingToken, string Code);
+    public record ApiVerifyRequest(string Email, string Code);
 }
